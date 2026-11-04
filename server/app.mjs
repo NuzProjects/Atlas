@@ -487,8 +487,6 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   };
   var isAdOrTracker = function(url) { return (${isAdOrTracker.toString()})(url, targetUrl); };
 
-  // Optional analytics failures must not abort a site's game-startup handler.
-  // Runtime errors and failures of non-tracker scripts retain normal reporting.
   window.addEventListener('error', function(event) {
     var script = event.target;
     if (script instanceof HTMLScriptElement && isAdOrTracker(unwrapProxyUrl(script.src))) event.stopImmediatePropagation();
@@ -782,7 +780,6 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
     };
   } catch(e) {}
 
-  // Resolve document-scoped encrypted links without exposing the codec key.
   Object.defineProperty(window, '__atlasLinkDestination', {value: function(anchor) { return unwrapProxyUrl(anchor.getAttribute('href') || anchor.getAttribute('data-atlas-href') || ''); }});
   var anchorGet = Element.prototype.getAttribute;
   var anchorSet = Element.prototype.setAttribute;
