@@ -61,7 +61,6 @@
     "@titaniumnetwork-dev/ultraviolet": "3.2.10",
     "bufferutil": "^4.1.0",
     "commander": "^15.0.0",
-    "eruda": "^3.4.3",
     "ipaddr.js": "^2.5.0",
     "ws": "^8.21.3"
   },

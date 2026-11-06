@@ -1,14 +1,6 @@
 export default [
   {
-    ignores: [
-      'node_modules/**',
-      'dist/**',
-      'artifacts/**',
-      'src/vendor/**',
-      'assets/**',
-      'public/eruda.js',
-      'public/atlas-url-crypto.js',
-    ],
+    ignores: ['node_modules/**', 'dist/**', 'artifacts/**', 'src/vendor/**', 'assets/**', 'public/atlas-url-crypto.js'],
   },
   {
     files: ['**/*.js', '**/*.mjs'],

@@ -42,6 +42,14 @@ export function proxyCookies(headers) {
 export function siteCookiePrefix(target) {
   return 'atlas_' + origins.hash(new URL(target).origin).slice(0, 32) + '_';
 }
+export function siteCookieNames(cookie, targets) {
+  const prefixes = targets.map(siteCookiePrefix);
+  const names = (cookie || '')
+    .split(';')
+    .map(value => value.trim().split('=')[0])
+    .filter(name => name && prefixes.some(prefix => name.startsWith(prefix)));
+  return [...new Set(names)];
+}
 export function siteCookies(cookie, target) {
   const prefix = siteCookiePrefix(target);
   return (cookie || '')

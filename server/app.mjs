@@ -23,6 +23,7 @@ import {
   escapeHtml,
   upstreamHeaders,
   responseHeaders,
+  siteCookieNames,
 } from './proxy-security.mjs';
 import { createUrlCodec, loadUrlKey } from './proxy-url.mjs';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -1302,6 +1303,31 @@ async function appHandler(req, res) {
     } catch {
       reply([]);
     }
+    return;
+  }
+
+  if (reqUrl.pathname === '/api/site-cookies') {
+    const targets = reqUrl.searchParams
+      .getAll('origin')
+      .slice(0, 8)
+      .filter(value => {
+        try {
+          return ['http:', 'https:'].includes(new URL(value).protocol);
+        } catch {
+          return false;
+        }
+      });
+    const names = siteCookieNames(req.headers.cookie, targets);
+    if (req.method === 'POST') {
+      res.writeHead(204, {
+        'Cache-Control': 'no-store',
+        ...(names.length ? { 'Set-Cookie': names.map(name => `${name}=; Path=/; Max-Age=0`) } : {}),
+      });
+      res.end();
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ count: names.length }));
     return;
   }
 

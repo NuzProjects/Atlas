@@ -204,6 +204,7 @@
     <script src="/atlas-game-ads.js"></script>
     <script src="/atlas-content-filter.js?v=1"></script>
     <script src="/atlas-icons.js?v=1"></script>
+    <script src="/atlas-site-data.js?v=1"></script>
     <script>
       if (window.self !== window.top && new URLSearchParams(window.location.search).get('atlas_blank') === '1') {
         try {
@@ -2156,6 +2157,29 @@
       .ondevice-action-btn svg {
         width: 14px;
         height: 14px;
+      }
+
+      .ondevice-item-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .ondevice-item-meta {
+        font-size: 11px;
+        color: #8b9096;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .ondevice-item-favicon {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        object-fit: contain;
       }
 
       .ondevice-empty-msg {
@@ -5407,86 +5431,113 @@
         });
       }
 
-      function renderOnDeviceSiteData() {
-        if (!onDeviceList) return;
-        onDeviceList.innerHTML = '';
+      function atlasSiteDataSummary(item) {
+        const parts = [];
+        if (item.cookies) parts.push(item.cookies + (item.cookies === 1 ? ' cookie' : ' cookies'));
+        if (item.items) parts.push(item.items + (item.items === 1 ? ' saved item' : ' saved items'));
+        if (item.databases) parts.push(item.databases + (item.databases === 1 ? ' database' : ' databases'));
+        return parts.join(' · ');
+      }
 
+      function atlasSiteDataTabUrl() {
         const currentTab = tabs.find(t => t.id === activeTabId);
-        const host = currentTab && !currentTab.isNewTab && currentTab.url ? getHostname(currentTab.url) : '';
-
-        let items = [];
-        if (!host || host.includes('google')) {
-          items = [
-            { domain: 'accounts.google.com', isG: true },
-            { domain: 'appsgenaiserver-pa.clients6.google.com', isG: false },
-            { domain: 'clients6.google.com', isG: false },
-            { domain: 'contacts.google.com', isG: false },
-            { domain: 'docs.google.com', isG: false },
-            { domain: 'drive.usercontent.google.com', isG: false },
-            { domain: 'google.com', isG: false },
-            { domain: 'meet.google.com', isG: false },
-          ];
-        } else {
-          items = [
-            { domain: host, isG: false },
-            { domain: `accounts.${host}`, isG: false },
-            { domain: `api.${host}`, isG: false },
-            { domain: `static.${host}`, isG: false },
-            { domain: `cdn.${host}`, isG: false },
-            { domain: `auth.${host}`, isG: false },
-          ];
+        if (!currentTab || currentTab.isNewTab || atlasInternalPage(currentTab.url)) return '';
+        try {
+          const url = new URL(currentTab.url);
+          return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+        } catch {
+          return '';
         }
+      }
 
-        const googleGIcon = `<svg viewBox="0 0 24 24" width="16" height="16">
-        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
-        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/>
-        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-      </svg>`;
-
-        const globeIcon = `<svg width="16" height="16" data-icon="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>`;
-
-        items.forEach(item => {
+      let atlasSiteDataGeneration = 0;
+      async function renderOnDeviceSiteData() {
+        if (!onDeviceList) return;
+        const generation = ++atlasSiteDataGeneration;
+        const pageUrl = atlasSiteDataTabUrl();
+        const empty = text => {
+          onDeviceList.innerHTML = '';
+          const message = document.createElement('div');
+          message.className = 'ondevice-empty-msg';
+          message.textContent = text;
+          onDeviceList.appendChild(message);
+        };
+        if (!pageUrl || !window.AtlasSiteData) {
+          empty('No site data stored for this site.');
+          return;
+        }
+        empty('Checking stored data…');
+        let items;
+        try {
+          items = await AtlasSiteData.collect(pageUrl);
+        } catch {
+          items = [];
+        }
+        if (generation !== atlasSiteDataGeneration) return;
+        if (!items.length) {
+          empty('No site data stored for this site.');
+          return;
+        }
+        onDeviceList.innerHTML = '';
+        for (const item of items) {
           const row = document.createElement('div');
           row.className = 'ondevice-item';
           row.innerHTML = `
           <div class="ondevice-item-left">
             <div class="ondevice-item-icon">
-              ${item.isG ? googleGIcon : globeIcon}
+              <img class="ondevice-item-favicon" src="/api/favicon?domain=${encodeURIComponent(item.host.replace(/:\d+$/, ''))}" alt="" />
             </div>
-            <div class="ondevice-item-domain">${escapeHtml(item.domain)}</div>
+            <div class="ondevice-item-text">
+              <div class="ondevice-item-domain">${escapeHtml(item.host)}</div>
+              <div class="ondevice-item-meta">${escapeHtml(atlasSiteDataSummary(item))}</div>
+            </div>
           </div>
           <div class="ondevice-item-actions">
-            <button class="ondevice-action-btn ondevice-delete-btn">
-              <svg data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+            <button class="ondevice-action-btn ondevice-delete-btn" aria-label="Delete data for ${escapeHtml(item.host)}">
+              ${atlasIcon('trash-2')}
             </button>
           </div>
         `;
-
-          const delBtn = row.querySelector('.ondevice-delete-btn');
-          if (delBtn) {
-            delBtn.onclick = e => {
-              e.stopPropagation();
-              if (row.inert) return;
-              const removal = animateAtlasHistoryRemoval(row);
-              removal.then(() => {
-                if (onDeviceList.children.length === 0) {
-                  onDeviceList.innerHTML = `<div class="ondevice-empty-msg">No site data stored for this site.</div>`;
-                }
-              });
-
-              const activeT = tabs.find(t => t.id === activeTabId);
-              if (activeT && activeT.iframe) {
-                try {
-                  activeT.iframe.contentWindow.sessionStorage.clear();
-                  activeT.iframe.contentWindow.localStorage.clear();
-                } catch {}
-              }
-            };
-          }
-
+          const favicon = row.querySelector('.ondevice-item-favicon');
+          favicon.onerror = () =>
+            favicon.replaceWith(document.createRange().createContextualFragment(atlasIcon('globe')));
+          row.querySelector('.ondevice-delete-btn').onclick = async e => {
+            e.stopPropagation();
+            if (row.dataset.clearing) return;
+            row.dataset.clearing = 'true';
+            await AtlasSiteData.clear(pageUrl, item.host).catch(() => {});
+            await animateAtlasHistoryRemoval(row);
+            if (!onDeviceList.querySelector('.ondevice-item')) empty('No site data stored for this site.');
+            updateSiteDataSummary();
+            const activeT = tabs.find(t => t.id === activeTabId);
+            if (activeT && atlasSiteDataTabUrl() === pageUrl) reloadAtlasTab(activeT);
+          };
           onDeviceList.appendChild(row);
-        });
+        }
+      }
+
+      async function updateSiteDataSummary() {
+        if (!siteDataAllowedText) return;
+        const pageUrl = atlasSiteDataTabUrl();
+        if (!pageUrl || !window.AtlasSiteData) {
+          siteDataAllowedText.textContent = 'No data stored';
+          return;
+        }
+        let items = [];
+        try {
+          items = await AtlasSiteData.collect(pageUrl);
+        } catch {}
+        if (pageUrl !== atlasSiteDataTabUrl()) return;
+        const cookies = items.reduce((total, item) => total + item.cookies, 0);
+        const stored = items.reduce((total, item) => total + item.items + item.databases, 0);
+        siteDataAllowedText.textContent = items.length
+          ? [
+              cookies && `${cookies} ${cookies === 1 ? 'cookie' : 'cookies'}`,
+              stored && `${stored} saved ${stored === 1 ? 'item' : 'items'}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')
+          : 'No data stored';
       }
 
       function updateSiteInfo() {
@@ -5508,9 +5559,7 @@
           }
         }
 
-        if (siteDataAllowedText) {
-          siteDataAllowedText.textContent = host ? `1 site allowed: ${host}` : 'Sites allowed';
-        }
+        updateSiteDataSummary();
 
         if (currentTab) {
           if (blockAdsToggle && typeof currentTab.blockAds === 'boolean') {
@@ -5959,7 +6008,9 @@
 
       function atlasSettingsTabFromHash() {
         const tab = atlasAppURL().hash.slice(1);
-        return ['privacy', 'customize', 'browsing', 'keybinds', 'advanced'].includes(tab) ? tab : 'privacy';
+        const touchOnly = matchMedia('(pointer: coarse) and (not (any-pointer: fine))').matches;
+        const available = ['privacy', 'customize', 'browsing', ...(touchOnly ? [] : ['keybinds']), 'advanced'];
+        return available.includes(tab) ? tab : 'privacy';
       }
       function atlasUpdateSettingsPath(tab, pushUrl) {
         const path = '/settings#' + tab;

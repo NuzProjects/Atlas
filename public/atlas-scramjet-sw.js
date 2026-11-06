@@ -2,6 +2,31 @@ importScripts('/vendor/scramjet/scramjet.all.js');
 const { ScramjetServiceWorker } = $scramjetLoadWorker();
 const engine = new ScramjetServiceWorker();
 self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('message', event => {
+  if (event.data?.type !== 'atlas-reload-cookies') return;
+  event.waitUntil(
+    new Promise(resolve => {
+      const request = indexedDB.open('$scramjet');
+      request.onupgradeneeded = () => request.transaction.abort();
+      request.onerror = () => resolve();
+      request.onsuccess = () => {
+        const db = request.result;
+        try {
+          const read = db.transaction('cookies').objectStore('cookies').get('cookies');
+          read.onsuccess = () => {
+            engine.cookieStore.load(JSON.stringify(read.result || {}));
+            resolve();
+          };
+          read.onerror = () => resolve();
+        } catch {
+          resolve();
+        } finally {
+          db.close();
+        }
+      };
+    })
+  );
+});
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', event => {
   event.respondWith(

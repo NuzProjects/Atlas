@@ -61,13 +61,18 @@ body,
 .tab-item.tab-gliding {
   background: var(--btn-hover) !important;
 }
+input:focus-visible,
+textarea:focus-visible {
+  outline: none !important;
+}
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
 [role='tab']:focus-visible,
-[role='menuitemradio']:focus-visible {
-  outline: none !important;
+[role='button']:focus-visible,
+[role='menuitemradio']:focus-visible,
+.clean-switch:has(input:focus-visible) .clean-switch-slider {
+  outline: 2px solid var(--text) !important;
+  outline-offset: 2px;
 }
 .search-bar,
 .new-tab-search-bar,

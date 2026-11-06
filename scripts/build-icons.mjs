@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const iconDirectory = path.join(path.dirname(require.resolve('lucide-static/package.json')), 'icons');
 const { version } = require('lucide-static/package.json');
 
-const runtimeIcons = ['chevron-down', 'globe', 'history', 'rotate-cw', 'x'];
+const runtimeIcons = ['chevron-down', 'globe', 'history', 'rotate-cw', 'trash-2', 'x'];
 const htmlFiles = ['public/index.html'];
 const imageIcons = {
   'assets/tab-globe.svg': ['globe', '#9b9fa3'],

@@ -289,3 +289,9 @@
     letter-spacing: -0.01em;
   }
 }
+
+@media (pointer: coarse) and (not (any-pointer: fine)) {
+  .settings-nav-item[data-tab='keybinds'] {
+    display: none;
+  }
+}

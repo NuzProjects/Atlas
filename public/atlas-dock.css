@@ -111,9 +111,6 @@
   color: var(--text-muted);
   text-decoration: none;
 }
-.home-dock-item:focus-visible {
-  outline: none !important;
-}
 
 .home-dock-item {
   font-size: 13.3333px;
