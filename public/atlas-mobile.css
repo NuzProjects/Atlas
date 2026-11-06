@@ -1,0 +1,297 @@
+@media (max-width: 760px) {
+  #homeSearchInput,
+  #newTabSearchInput,
+  #bottomAddressBar,
+  #settingsSearchInput,
+  .settings-cards-container input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  .settings-cards-container textarea,
+  #addShortcutModal input,
+  #wssModal input {
+    font-size: 16px;
+  }
+
+  #homeView {
+    overflow-y: auto;
+    justify-content: center;
+    justify-content: safe center;
+    padding-bottom: 96px;
+  }
+  .new-tab-screen {
+    overflow-y: auto;
+  }
+
+  .home-bottom-dock {
+    bottom: 16px;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+  .home-bottom-dock .home-dock-item {
+    width: 44px;
+    height: 44px;
+  }
+  .atlas-dock-clock {
+    width: 78px;
+    font-size: 11px;
+  }
+  .atlas-dock-delay {
+    width: 58px;
+    font-size: 11px;
+  }
+
+  .tab-bar {
+    padding: 0 8px;
+  }
+  .tab-item {
+    min-height: 36px;
+  }
+  .tab-close {
+    width: 28px;
+    height: 28px;
+    flex: none;
+  }
+  .new-tab-btn {
+    width: 36px;
+    height: 36px;
+    flex: none;
+  }
+
+  #browserView .viewport-container {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+    margin: 6px 8px 122px;
+  }
+  #browserView.bottom-bar-hidden .viewport-container {
+    height: auto;
+    margin-bottom: 8px;
+  }
+  #browserView .bottom-bar {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 8px;
+    padding: 8px;
+    border-radius: 20px !important;
+  }
+  #browserView .bottom-address-wrapper {
+    order: -1;
+    flex: 1 0 100%;
+    position: relative;
+    left: auto;
+    transform: none;
+    width: auto;
+    height: 44px;
+    padding: 0 6px;
+  }
+  #browserView .bottom-address-bar {
+    height: 44px;
+    min-width: 0;
+  }
+  #browserView .address-action-btn {
+    width: 36px;
+    height: 36px;
+  }
+  #browserView .bottom-left-controls,
+  #browserView .nav-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9999px;
+    background: var(--btn-bg);
+  }
+  #browserView .bottom-bar .home-icon-btn,
+  #browserView .bottom-bar .nav-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 9999px;
+    background: transparent !important;
+  }
+  #browserView .bottom-bar .home-icon-btn:active,
+  #browserView .bottom-bar .nav-icon-btn:active,
+  #browserView .bottom-bar .nav-icon-btn[aria-expanded='true'] {
+    background: var(--btn-hover) !important;
+  }
+  #browserView .bottom-bar .home-icon-btn svg,
+  #browserView .bottom-bar .nav-icon-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+  #atlasSplitButton {
+    display: none;
+  }
+  #browserView .site-info-popup {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 180px);
+  }
+  .atlas-history-panel {
+    width: calc(100vw - 16px);
+    max-height: min(440px, calc(100dvh - 180px));
+  }
+  .atlas-history-heading button {
+    width: 36px;
+    height: 36px;
+  }
+
+  #settingsView {
+    height: 100%;
+    padding: 20px 16px 104px;
+  }
+  .settings-window {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .settings-sidebar {
+    position: static;
+    width: 100%;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .settings-section-title {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .settings-cards-container {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .settings-nav-list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .settings-nav-item {
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: auto;
+    min-width: 0;
+    min-height: 58px;
+    padding: 8px 2px;
+    font-size: clamp(10.5px, 3.1vw, 12px);
+  }
+  .settings-nav-item svg {
+    display: block;
+    order: -1;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+  }
+  .settings-nav-item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .settings-content-pane {
+    padding: 0;
+  }
+  .settings-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    padding: 16px;
+  }
+  .settings-row-text {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .settings-control {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
+  }
+  .settings-row:has(input[type='text'], input[type='url'], .settings-wisp-control) .settings-control,
+  .settings-wisp-control {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .settings-shortcut-controls {
+    justify-content: flex-start;
+  }
+  .settings-action-btn,
+  .settings-cards-container .atlas-dropdown-button {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-engine-control {
+    width: 58px;
+  }
+  .search-engine-control .atlas-dropdown-label {
+    display: none;
+  }
+  .search-engine-control .atlas-dropdown-button {
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 8px;
+  }
+  .search-wrapper .search-bar,
+  .new-tab-search-wrapper .new-tab-search-bar {
+    padding-left: 40px;
+    padding-right: 76px;
+  }
+  .search-leading-icon {
+    left: 14px;
+    width: 17px;
+  }
+  .welcome-title {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 500px) {
+  #browserView .bottom-bar {
+    flex-wrap: nowrap;
+    gap: 0 6px;
+    padding: 4px 8px;
+  }
+  #browserView .bottom-address-wrapper {
+    order: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  #browserView .viewport-container {
+    margin-bottom: 66px;
+  }
+  #homeView {
+    padding-top: 16px;
+    padding-bottom: 80px;
+  }
+  .home-bottom-dock {
+    bottom: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .settings-nav-list {
+    gap: 2px;
+  }
+  .settings-nav-item {
+    padding: 8px 0;
+    font-size: 10px;
+    letter-spacing: -0.01em;
+  }
+}
+
+@media (pointer: coarse) and (not (any-pointer: fine)) {
+  .settings-nav-item[data-tab='keybinds'] {
+    display: none;
+  }
+}

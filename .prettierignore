@@ -1,0 +1,10 @@
+node_modules
+dist
+artifacts
+.cache
+assets
+src/vendor
+public/eruda.js
+public/atlas-url-crypto.js
+package-lock.json
+*.md

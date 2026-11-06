@@ -1,7 +1,9 @@
 import * as compat from './compat.mjs';
 import { WispPacket } from './packet.mjs';
 
-export function get_conn_id() { return compat.crypto.randomUUID().split('-')[0]; }
+export function get_conn_id() {
+  return compat.crypto.randomUUID().split('-')[0];
+}
 
 export class AsyncQueue {
   constructor(max_size) {
@@ -39,7 +41,9 @@ export class AsyncQueue {
     this.get_callbacks.splice(0).forEach(resolve => resolve());
     this.put_callbacks.splice(0).forEach(resolve => resolve());
   }
-  get size() { return this.queue.length; }
+  get size() {
+    return this.queue.length;
+  }
 }
 
 export class AsyncWebSocket {
@@ -54,25 +58,36 @@ export class AsyncWebSocket {
   async connect() {
     this.ws.binaryType = 'arraybuffer';
     await new Promise((resolve, reject) => {
-      this.ws.onopen = () => { this.connected = true; resolve(); };
+      this.ws.onopen = () => {
+        this.connected = true;
+        resolve();
+      };
       this.ws.onmessage = event => {
         const bytes = event.data.byteLength ?? event.data.length ?? 0;
-        if (typeof event.data === 'string' || this.queued_bytes + bytes > 4 * 1024 * 1024 || !this.data_queue.put_now(event.data)) {
+        if (
+          typeof event.data === 'string' ||
+          this.queued_bytes + bytes > 4 * 1024 * 1024 ||
+          !this.data_queue.put_now(event.data)
+        ) {
           this.close(1009, 'Receive queue exceeded');
           return;
         }
         this.queued_bytes += bytes;
         if (this.data_queue.size >= 128 || this.queued_bytes >= 2 * 1024 * 1024) this.ws.pause?.();
       };
-      this.ws.onerror = () => { if (!this.connected) reject(new Error('WebSocket connection failed')); };
+      this.ws.onerror = () => {
+        if (!this.connected) reject(new Error('WebSocket connection failed'));
+      };
       this.ws.onclose = () => {
         this.closed = true;
         if (!this.connected) reject(new Error('WebSocket closed before connecting'));
         this.connected = false;
         this.data_queue.close({ drain: true });
       };
-      if (this.ws.readyState === 1) { this.connected = true; resolve(); }
-      else if (this.ws.readyState >= 2) reject(new Error('WebSocket is closed'));
+      if (this.ws.readyState === 1) {
+        this.connected = true;
+        resolve();
+      } else if (this.ws.readyState >= 2) reject(new Error('WebSocket is closed'));
     });
   }
   async recv() {
@@ -89,7 +104,10 @@ export class AsyncWebSocket {
     if (this.ws.bufferedAmount <= this.send_buffer_size) return;
     while (this.ws.bufferedAmount > this.send_buffer_size / 2) {
       if (this.closed || this.ws.readyState !== 1) throw new Error('WebSocket closed while draining');
-      if (Date.now() > deadline) { this.close(1011, 'Send timeout'); throw new Error('WebSocket send timeout'); }
+      if (Date.now() > deadline) {
+        this.close(1011, 'Send timeout');
+        throw new Error('WebSocket send timeout');
+      }
       await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
@@ -102,5 +120,7 @@ export class AsyncWebSocket {
     this.ws.resume?.();
     this.ws.close(code, reason);
   }
-  get buffered_amount() { return this.ws.bufferedAmount; }
+  get buffered_amount() {
+    return this.ws.bufferedAmount;
+  }
 }

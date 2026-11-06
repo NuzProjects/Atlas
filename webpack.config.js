@@ -1,117 +1,131 @@
-const {BannerPlugin}=require('webpack');
-const fs=require('node:fs');
-const path=require('node:path');
+const { BannerPlugin } = require('webpack');
+const fs = require('node:fs');
+const path = require('node:path');
 const common_options = {
-  mode: "development",
+  mode: 'development',
   stats: {
     orphanModules: true,
   },
-  devtool: "source-map",
-  optimization: {mangleExports: false}
-}
+  devtool: 'source-map',
+  optimization: { mangleExports: false },
+};
 
 const webpack_configs = [
   {
-    name: "client",
-    entry: "./src/entrypoints/client.mjs",
+    name: 'client',
+    entry: './src/entrypoints/client.mjs',
     output: {
-      filename: "wisp-client.js",
+      filename: 'wisp-client.js',
       library: {
-        name: "wisp_client",
-        type: "var"
-      }
+        name: 'wisp_client',
+        type: 'var',
+      },
     },
-    ...common_options
+    ...common_options,
   },
   {
-    name: "server",
-    entry: "./src/entrypoints/server.mjs",
+    name: 'server',
+    entry: './src/entrypoints/server.mjs',
     output: {
-      filename: "wisp-server.js",
+      filename: 'wisp-server.js',
       library: {
-        name: "wisp_server",
-        type: "var"
-      }
+        name: 'wisp_server',
+        type: 'var',
+      },
     },
-    ...common_options
+    ...common_options,
   },
   {
-    name: "full",
-    entry: "./src/index.mjs",
+    name: 'full',
+    entry: './src/index.mjs',
     output: {
-      filename: "wisp-full.js",
+      filename: 'wisp-full.js',
       library: {
-        name: "wisp_full",
-        type: "var"
-      }
+        name: 'wisp_full',
+        type: 'var',
+      },
     },
-    ...common_options
-  }
-]
+    ...common_options,
+  },
+];
 
 let new_configs = [];
 for (let config of webpack_configs) {
   let legacy_config = {
     ...config,
-    name: config.name + "_legacy",
+    name: config.name + '_legacy',
     module: {
       rules: [
         {
           use: {
-            loader: "babel-loader",
+            loader: 'babel-loader',
             options: {
-              targets: "Chrome >= 64, Firefox >= 65, Safari >= 14",
-              presets: ["@babel/preset-env"]
-            }
-          }
-        }
-      ]
+              targets: 'Chrome >= 64, Firefox >= 65, Safari >= 14',
+              presets: ['@babel/preset-env'],
+            },
+          },
+        },
+      ],
     },
-  }
+  };
   legacy_config.output = {
     ...legacy_config.output,
-    filename: config.output.filename.replace(".js", "-legacy.js"),
-  }
+    filename: config.output.filename.replace('.js', '-legacy.js'),
+  };
 
   let es6_config = {
     ...config,
-    name: config.name + "_es6",
-    experiments: {outputModule: true},
+    name: config.name + '_es6',
+    experiments: { outputModule: true },
     output: {
-      filename: config.output.filename.replace(".js", ".mjs"),
+      filename: config.output.filename.replace('.js', '.mjs'),
       library: {
-        type: "module"
-      }
-    }
-  }
+        type: 'module',
+      },
+    },
+  };
 
   let cjs_config = {
     ...config,
-    name: config.name + "_cjs",
-    target: "node",
+    name: config.name + '_cjs',
+    target: 'node',
     output: {
-      filename: config.output.filename.replace(".js", ".cjs"),
+      filename: config.output.filename.replace('.js', '.cjs'),
       library: {
-        type: "commonjs"
-      }
+        type: 'commonjs',
+      },
     },
     externals: {
-      "ws": "commonjs ws",
-      "crypto": "commonjs crypto",
-      "ipaddr.js": "commonjs ipaddr.js"
+      ws: 'commonjs ws',
+      crypto: 'commonjs crypto',
+      'ipaddr.js': 'commonjs ipaddr.js',
     },
     optimization: {
-      minimize: false
-    }
-  }
+      minimize: false,
+    },
+  };
 
   new_configs.push(legacy_config);
   new_configs.push(es6_config);
   new_configs.push(cjs_config);
 }
 
-module.exports = webpack_configs.concat(new_configs, [{
-  name:'url-crypto',entry:'./scripts/url-crypto-browser.mjs',target:'web',devtool:false,
-  plugins:[new BannerPlugin({stage:5000,banner:fs.readFileSync(path.join(path.dirname(require.resolve('@noble/ciphers/aes.js')),'LICENSE'),'utf8')})],
-  output:{path:path.join(__dirname,'public'),filename:'atlas-url-crypto.js',library:{name:'AtlasUrlCrypto',type:'var'}}
-}]);
+module.exports = webpack_configs.concat(new_configs, [
+  {
+    name: 'url-crypto',
+    entry: './scripts/url-crypto-browser.mjs',
+    target: 'web',
+    devtool: false,
+    plugins: [
+      new BannerPlugin({
+        stage: 5000,
+        banner: fs.readFileSync(path.join(path.dirname(require.resolve('@noble/ciphers/aes.js')), 'LICENSE'), 'utf8'),
+      }),
+    ],
+    output: {
+      path: path.join(__dirname, 'public'),
+      filename: 'atlas-url-crypto.js',
+      library: { name: 'AtlasUrlCrypto', type: 'var' },
+    },
+  },
+]);

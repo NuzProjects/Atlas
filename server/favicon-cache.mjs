@@ -6,7 +6,9 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 export function createFaviconCache({ directory, fallbackPath, fetchImage = fetch }) {
   const pending = new Map();
   return async function favicon(domain) {
-    domain = String(domain || '').trim().toLowerCase();
+    domain = String(domain || '')
+      .trim()
+      .toLowerCase();
     if (!/^(?=.{1,253}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(domain)) throw new Error('Invalid favicon domain');
     if (pending.has(domain)) return pending.get(domain);
     const operation = (async () => {
@@ -23,7 +25,9 @@ export function createFaviconCache({ directory, fallbackPath, fetchImage = fetch
 
       if (domain.includes('.') && !/^(?:localhost|127\.|0\.)/.test(domain)) {
         try {
-          const response = await fetchImage(`https://icons.duckduckgo.com/ip3/${domain}.ico`, { signal: AbortSignal.timeout(5000) });
+          const response = await fetchImage(`https://icons.duckduckgo.com/ip3/${domain}.ico`, {
+            signal: AbortSignal.timeout(5000),
+          });
           const contentType = response.headers.get('content-type') || '';
           if (!response.ok || !contentType.startsWith('image/')) throw new Error('Icon unavailable');
           const data = Buffer.from(await response.arrayBuffer());
@@ -32,11 +36,21 @@ export function createFaviconCache({ directory, fallbackPath, fetchImage = fetch
           await fs.writeFile(imagePath, data);
           await fs.writeFile(metadataPath, JSON.stringify({ contentType, savedAt: Date.now() }));
           return { data, contentType };
-        } catch { if (stale) return stale; }
+        } catch {
+          if (stale) return stale;
+        }
       }
-      return { data: await fs.readFile(fallbackPath), contentType: path.extname(String(fallbackPath)) === '.png' ? 'image/png' : 'image/svg+xml', fallback: true };
+      return {
+        data: await fs.readFile(fallbackPath),
+        contentType: path.extname(String(fallbackPath)) === '.png' ? 'image/png' : 'image/svg+xml',
+        fallback: true,
+      };
     })();
     pending.set(domain, operation);
-    try { return await operation; } finally { pending.delete(domain); }
+    try {
+      return await operation;
+    } finally {
+      pending.delete(domain);
+    }
   };
 }
