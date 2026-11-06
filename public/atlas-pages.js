@@ -13,8 +13,7 @@
       /[&<>"']/g,
       char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
     );
-  const closeIcon =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
+  const closeIcon = atlasIcon('x');
   document.title = 'History';
   document.getElementById('pageTitle').textContent = document.title;
   document.querySelectorAll('[data-page]').forEach(button => {

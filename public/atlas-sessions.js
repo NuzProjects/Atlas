@@ -140,7 +140,7 @@ document.querySelector('.discord-link')?.addEventListener('click', dismissAtlasR
 function promptAtlasRestore(session) {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop atlas-restore-backdrop';
-  backdrop.innerHTML = `<div class="modal-card" role="dialog" aria-labelledby="atlasRestoreTitle"><div class="atlas-restore-heading"><h2 id="atlasRestoreTitle" class="atlas-restore-title">Restore Tabs</h2><button class="atlas-restore-close" aria-label="Dismiss restore tabs" data-restore="close">${atlasIcon('close')}</button></div><button class="modal-btn" data-restore="restore">Restore tabs</button><p class="atlas-restore-error" role="status" hidden></p></div>`;
+  backdrop.innerHTML = `<div class="modal-card" role="dialog" aria-labelledby="atlasRestoreTitle"><div class="atlas-restore-heading"><h2 id="atlasRestoreTitle" class="atlas-restore-title">Restore Tabs</h2><button class="atlas-restore-close" aria-label="Dismiss restore tabs" data-restore="close">${atlasIcon('x')}</button></div><button class="modal-btn" data-restore="restore">Restore tabs</button><p class="atlas-restore-error" role="status" hidden></p></div>`;
   const dismiss = dismissAtlasRestore;
   backdrop.querySelector('[data-restore="close"]').onclick = dismiss;
   backdrop.querySelector('[data-restore="restore"]').onclick = () => {

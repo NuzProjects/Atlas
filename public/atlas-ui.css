@@ -372,8 +372,8 @@ textarea:focus-visible,
   place-items: center;
 }
 .home-icon-btn svg {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
 }
 .home-dock-item.discord-link {
   text-decoration: none;
@@ -816,8 +816,8 @@ textarea:focus-visible,
   height: 13px;
 }
 #atlasHistoryButton svg {
-  width: 23px;
-  height: 23px;
+  width: 18px;
+  height: 18px;
 }
 .atlas-session-group > span {
   flex: 1;
@@ -1141,8 +1141,6 @@ textarea:focus-visible,
 }
 .atlas-reload-icon {
   color: var(--text) !important;
-  width: 16px !important;
-  height: 16px !important;
 }
 .atlas-history-time {
   width: 62px;
@@ -1503,13 +1501,6 @@ textarea:focus-visible,
   flex: none;
   filter: none;
   shape-rendering: geometricPrecision;
-}
-.tab-icon-svg path {
-  stroke: currentColor;
-  stroke-width: 0.6px;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-  paint-order: stroke fill;
 }
 #atlasExtensionsButton svg {
   width: 22px;

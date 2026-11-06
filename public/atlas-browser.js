@@ -21,7 +21,7 @@ function openAtlasInternalTab(page) {
   else createTab('atlas://' + page);
   switchView('browser');
 }
-document.getElementById('navReload').innerHTML = atlasIcon('reload');
+document.getElementById('navReload').innerHTML = atlasIcon('rotate-cw', 'atlas-reload-icon');
 
 const atlasLinkPreview = document.createElement('div');
 atlasLinkPreview.className = 'atlas-link-preview';
@@ -82,7 +82,7 @@ function atlasHistoryRow(title, url, open, remove, visitedAt) {
   const close = document.createElement('button');
   close.className = 'atlas-history-delete';
   close.setAttribute('aria-label', 'Remove ' + (title || url || 'New Tab') + ' from history');
-  close.innerHTML = atlasIcon('close');
+  close.innerHTML = atlasIcon('x');
   close.onclick = e => {
     e.stopPropagation();
     if (row.inert) return;
@@ -247,7 +247,7 @@ function openAtlasHistory() {
   panel.className = 'atlas-dropdown-menu atlas-history-panel';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'Atlas history');
-  panel.innerHTML = `<div class="atlas-history-heading"><strong>History</strong><button aria-label="Close history">${atlasIcon('close')}</button></div><div class="atlas-history-list"></div>`;
+  panel.innerHTML = `<div class="atlas-history-heading"><strong>History</strong><button aria-label="Close history">${atlasIcon('x')}</button></div><div class="atlas-history-list"></div>`;
   panel.querySelector('button').onclick = () => closeAtlasMenu(true);
   const list = panel.querySelector('.atlas-history-list');
   const entries = atlasHistoryEntries();

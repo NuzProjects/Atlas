@@ -1,40 +1,3 @@
-const ATLAS_ICONS = {
-  newTab:
-    '<path fill="currentColor" stroke="none" fill-rule="evenodd" clip-rule="evenodd" d="M5.578 5.343a9.25 9.25 0 0 0 6.803 15.9c-.206-.912-.234-2.138.393-3.319c.652-1.229 2.002-1.762 2.995-2.006a9.2 9.2 0 0 1 1.898-.254h.043c1.673-.018 2.426-.562 2.826-1.08c.342-.444.47-.887.602-1.336l.05-.172A9.22 9.22 0 0 0 18.6 5.519l-.027.1c-.163.594-.425 1.202-.711 1.636c-.256.388-.752.78-1.164 1.076a10 10 0 0 1-.902.56c-.228.132-.433.25-.63.38c-.432.286-.766.593-.991 1.056a.67.67 0 0 0-.035.49c.075.272.126.578.126.889c.002.649-.328 1.176-.753 1.518a2.4 2.4 0 0 1-1.521.526c-2.455-.027-3.965-2.02-4.164-4.236c-.08-.881-.466-1.773-.954-2.552a8.8 8.8 0 0 0-1.296-1.62m1.167-.956a10.5 10.5 0 0 1 1.4 1.779c.558.89 1.069 2.012 1.177 3.214c.15 1.68 1.213 2.854 2.686 2.87a.9.9 0 0 0 .563-.194c.146-.117.196-.24.195-.346c0-.156-.026-.328-.072-.495a2.16 2.16 0 0 1 .131-1.542c.385-.794.956-1.285 1.514-1.653c.239-.158.487-.3.71-.43l.09-.05c.255-.148.48-.28.683-.427c.431-.31.704-.557.787-.684c.183-.276.388-.734.518-1.207c.103-.374.131-.662.122-.84A9.2 9.2 0 0 0 12 2.75a9.2 9.2 0 0 0-5.255 1.637M22.68 13.24q.07-.61.071-1.24c0-5.937-4.813-10.75-10.75-10.75S1.25 6.063 1.25 12S6.063 22.75 12 22.75c5.46 0 9.97-4.071 10.659-9.344a3 3 0 0 1 .048-.156zm-2.774 3.567c-.596.218-1.314.348-2.179.357h-.031l-.09.003a7.7 7.7 0 0 0-1.477.208c-.902.221-1.693.62-2.029 1.252c-.456.859-.39 1.793-.22 2.432a9.26 9.26 0 0 0 6.026-4.252"/>',
-  chevron: '<path d="m6 9 6 6 6-6"/>',
-  plus: '<path fill="currentColor" stroke="none" d="M11 20a1 1 0 1 0 2 0v-7h7a1 1 0 1 0 0-2h-7V4a1 1 0 1 0-2 0v7H4a1 1 0 1 0 0 2h7z"/>',
-  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>',
-  pin: '<path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588c-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828l-3.182 3.182c-.195.195-1.219.902-1.414.707s.512-1.22.707-1.414l3.182-3.182l-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146m.122 2.112v-.002zm0-.002v.002a.5.5 0 0 1-.122.51L6.293 6.878a.5.5 0 0 1-.511.12H5.78l-.014-.004a5 5 0 0 0-.288-.076a5 5 0 0 0-.765-.116c-.422-.028-.836.008-1.175.15l5.51 5.509c.141-.34.177-.753.149-1.175a5 5 0 0 0-.192-1.054l-.004-.013v-.001a.5.5 0 0 1 .12-.512l3.536-3.535a.5.5 0 0 1 .532-.115l.096.022c.087.017.208.034.344.034q.172.002.343-.04L9.927 2.028q-.042.172-.04.343a1.8 1.8 0 0 0 .062.46z"/>',
-  mute: '<path d="M22 12c0-4.09-2.47-7.61-6-9.16v2.24c2.39 1.39 4 3.96 4 6.92c0 1.85-.64 3.54-1.69 4.89l-1.42-1.42c.7-.98 1.12-2.17 1.12-3.47c0-1.77-.78-3.36-2-4.46v7.05l-2-2V4c0-.37-.2-.71-.53-.88c-.32-.17-.72-.15-1.03.05L7.73 6.32L2.71 1.29L1.3 2.7l20 20l1.41-1.41l-2.98-2.98A9.94 9.94 0 0 0 22 11.99Zm-10-1.41L9.17 7.76L12 5.87zm0 7.54l-4.45-2.96s-.06-.02-.08-.03c-.06-.03-.12-.06-.19-.08s-.13-.03-.2-.04c-.03 0-.06-.02-.09-.02h-3V9h.76L3.02 7.27C2.41 7.61 2 8.26 2 9v6c0 1.1.9 2 2 2h2.7l5.75 3.83c.17.11.36.17.55.17c.16 0 .32-.04.47-.12c.33-.17.53-.51.53-.88v-1.76l-2-2z"/>',
-  volume:
-    '<path d="M16 21c3.527-1.547 5.999-4.909 5.999-9S19.527 4.547 16 3v2c2.387 1.386 3.999 4.047 3.999 7S18.387 17.614 16 19z"/><path d="M16 7v10c1.225-1.1 2-3.229 2-5s-.775-3.9-2-5M4 17h2.697l5.748 3.832a1 1 0 0 0 1.027.05A1 1 0 0 0 14 20V4a1 1 0 0 0-1.554-.832L6.697 7H4c-1.103 0-2 .897-2 2v6c0 1.103.897 2 2 2m0-8h3c.033 0 .061-.016.093-.019a1 1 0 0 0 .38-.116c.026-.015.057-.017.082-.033L12 5.868v12.264l-4.445-2.964c-.025-.017-.056-.02-.082-.033a1 1 0 0 0-.382-.116C7.059 15.016 7.032 15 7 15H4z"/>',
-  moon: '<path d="M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11"/>',
-  close: '<path d="m6 6 12 12M18 6 6 18"/>',
-  closeOthers: '<path d="m3 5 6 6m0-6-6 6m12-6 6 6m0-6-6 6M3 19h18"/>',
-  closeLeft: '<path d="M4 4v16m13-13-5 5 5 5M9 12h12"/>',
-  closeRight: '<path d="M20 4v16M7 7l5 5-5 5M3 12h12"/>',
-  split: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 3v18"/>',
-  history:
-    '<path fill="currentColor" stroke="none" d="M6.865 6.882A7.25 7.25 0 1 1 4.75 12a.75.75 0 0 0-1.5 0a8.75 8.75 0 1 0 2.552-6.176a1 1 0 0 0-.07.08L4.475 4.646a.5.5 0 0 0-.852.309L3.27 8.844a.5.5 0 0 0 .543.543l3.89-.354a.5.5 0 0 0 .307-.851L6.782 6.954a1 1 0 0 0 .083-.072"/><path fill="currentColor" stroke="none" d="M12.75 7a.75.75 0 0 0-1.5 0v5a.75.75 0 0 0 .352.636l3 1.875a.75.75 0 1 0 .796-1.272l-2.648-1.655z"/>',
-  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18"/>',
-  check: '<path d="m5 12 4 4L19 6"/>',
-  palette: '<circle cx="12" cy="12" r="9"/><path d="M7 9h.01M12 6h.01M17 9h.01M12 17h.01"/>',
-  layout: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/>',
-  code: '<path d="m8 7-5 5 5 5M16 7l5 5-5 5"/>',
-  external: '<path d="M14 3h7v7M21 3 10 14M10 3H4v17h17v-6"/>',
-};
-function atlasIcon(name, className = '') {
-  if (['pin', 'mute', 'volume'].includes(name))
-    return `<svg class="${className}" viewBox="0 0 ${name === 'pin' ? '16 16' : '24 24'}" fill="currentColor" aria-hidden="true">${ATLAS_ICONS[name]}</svg>`;
-  if (name === 'reload')
-    return `<svg class="${className} atlas-reload-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 16.22 7.78L13 11h7V4z"/></svg>`;
-  if (name === 'developer')
-    return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m16.71 16.71l4.7-4.71l-4.7-4.71l-1.42 1.42l3.3 3.29l-3.3 3.29zm-8-1.42L5.41 12l3.3-3.29l-1.42-1.42L2.59 12l4.7 4.71zM14 3l-.98-.22l-2 9l-2 9L10 21l.98.22l2-9l2-9z"/></svg>`;
-  if (name === 'hibernate')
-    return `<svg class="${className}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" aria-hidden="true"><path d="M16.866 7.47A18 18 0 0 0 16 13c0 9.941 8.059 18 18 18a17.9 17.9 0 0 0 7.134-1.47C38.801 36.767 32.012 42 24 42c-9.941 0-18-8.059-18-18c0-7.407 4.473-13.768 10.866-16.53Z"/><path stroke-linecap="round" d="M31.66 10H41l-10 8h10"/></svg>`;
-  return `<svg class="${className}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ATLAS_ICONS[name] || ATLAS_ICONS.check}</svg>`;
-}
-
 let atlasOpenMenu = null;
 let atlasMenuTrigger = null;
 function fadeAtlasMenu(menu) {
@@ -133,7 +96,7 @@ function hydrateAtlasDropdowns(root = document) {
     wrapper.append(button);
     select._atlasRefresh = () => {
       const option = select.selectedOptions[0] || select.options[0];
-      button.innerHTML = `<span class="atlas-dropdown-label">${escapeHtml(option.textContent.replace(/\s*\(selected\)/g, ''))}</span>${dropdownOptionIcon(option.value, select)}${atlasIcon('chevron', 'atlas-dropdown-chevron')}`;
+      button.innerHTML = `<span class="atlas-dropdown-label">${escapeHtml(option.textContent.replace(/\s*\(selected\)/g, ''))}</span>${dropdownOptionIcon(option.value, select)}${atlasIcon('chevron-down', 'atlas-dropdown-chevron')}`;
     };
     select._atlasRefresh();
     select.addEventListener('change', select._atlasRefresh);
