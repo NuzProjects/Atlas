@@ -295,8 +295,6 @@ a:focus-visible,
   background: var(--input-hover) !important;
   color: var(--text);
   border-radius: 24px;
-}
-.search-suggestions-dropdown {
   position: fixed !important;
   bottom: auto !important;
   right: auto !important;
@@ -307,6 +305,7 @@ a:focus-visible,
   overscroll-behavior: contain;
   z-index: 10050;
   box-sizing: border-box;
+  overflow: hidden !important;
 }
 .suggestion-item {
   min-height: 44px;
@@ -315,11 +314,6 @@ a:focus-visible,
 .suggestion-text {
   min-width: 0;
   overflow-wrap: anywhere;
-  white-space: normal !important;
-}
-.suggestion-icon,
-.suggestion-arrow {
-  flex: none;
 }
 .suggestion-item.selected {
   outline: 2px solid var(--text-muted);
@@ -332,6 +326,7 @@ a:focus-visible,
 }
 .suggestion-icon,
 .suggestion-arrow {
+  flex: none;
   color: var(--text-muted);
 }
 .suggestion-item:hover,
@@ -393,11 +388,9 @@ a:focus-visible,
 .site-info-popup .site-info-item {
   border-radius: 12px;
 }
-.site-info-popup .clean-switch-slider {
-  background: var(--btn-bg) !important;
-}
 .site-info-popup input:checked + .clean-switch-slider {
   background: #73797e !important;
+  box-shadow: none;
 }
 .site-info-domain,
 .site-info-back-btn,
@@ -482,8 +475,6 @@ a:focus-visible,
   border-radius: 12px;
   box-shadow: 0 12px 40px #0008;
   animation: atlasMenuEnter 0.15s ease both;
-}
-.atlas-dropdown-menu {
   min-width: 200px;
   max-height: min(380px, 70vh);
   overflow-y: auto;
@@ -651,6 +642,7 @@ a:focus-visible,
   inset: -4px -20px -8px;
   transform: translateY(-28px);
   transition: transform 0.48s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
 }
 #browserView.bottom-bar-hidden .bottom-bar-reveal-btn:hover,
 #browserView.bottom-bar-hidden:has(.bottom-bar-hover-zone:hover) .bottom-bar-reveal-btn,
@@ -669,9 +661,6 @@ a:focus-visible,
 }
 #browserView.bottom-bar-hidden .bottom-bar-hover-zone {
   display: block;
-}
-.bottom-bar-reveal-btn::before {
-  pointer-events: none;
 }
 .bottom-bar-reveal-btn:hover::before,
 .bottom-bar-reveal-btn:focus-visible::before {
@@ -714,7 +703,6 @@ a:focus-visible,
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
 }
@@ -790,7 +778,6 @@ a:focus-visible,
   height: 25px;
   margin-right: 4px;
   border-radius: 6px;
-  background: transparent;
   color: #fff;
   cursor: pointer;
   flex-shrink: 0;
@@ -939,6 +926,10 @@ a:focus-visible,
   bottom: 0;
   height: 100%;
   margin: 0;
+  border: 1px solid #ffffff14 !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  clip-path: inset(0 round 16px);
 }
 .atlas-split [data-atlas-pane='left'] {
   left: 0;
@@ -953,17 +944,13 @@ a:focus-visible,
 .browser-frame.atlas-split-visible {
   display: block !important;
 }
-.atlas-split .new-tab-search-wrapper {
-  width: 100%;
-}
-.atlas-split .new-tab-title {
-  font-size: clamp(24px, 3vw, 40px);
-}
 .atlas-split #newTabShortcutsRow {
+  pointer-events: none;
   opacity: 0;
   transform: translateY(-6px);
   visibility: hidden;
-  pointer-events: none;
+  filter: blur(5px);
+  transition-delay: 0s, 0s, 0s, 0.36s;
 }
 .atlas-split .new-tab-screen,
 .atlas-split-empty {
@@ -975,6 +962,7 @@ a:focus-visible,
   font-size: clamp(24px, 3vw, 40px);
 }
 .atlas-split .new-tab-search-wrapper {
+  width: 100%;
   margin-bottom: 24px;
 }
 .atlas-split-empty {
@@ -1005,12 +993,6 @@ a:focus-visible,
 .atlas-split-empty input {
   width: 100%;
   font-size: 13px;
-}
-.atlas-split [data-atlas-pane] {
-  border: 1px solid #ffffff14 !important;
-  border-radius: 16px !important;
-  overflow: hidden;
-  clip-path: inset(0 round 16px);
 }
 #browserView .viewport-container.atlas-split {
   border: 0 !important;
@@ -1156,11 +1138,9 @@ a:focus-visible,
 }
 .atlas-history-show-all {
   width: 100%;
-  margin-top: 8px;
   padding: 10px;
   background: var(--btn-bg);
   color: var(--text);
-  border-radius: 10px;
   cursor: pointer;
 }
 .atlas-history-show-all:hover {
@@ -1487,7 +1467,6 @@ a:focus-visible,
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
 }
 .atlas-history-show-all {
   flex-shrink: 0;
@@ -1593,43 +1572,32 @@ a:focus-visible,
 #newTabScreen.active,
 .atlas-split-empty:not([hidden]) {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
   justify-items: center;
   align-content: normal;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 48px minmax(0, 1fr);
 }
 .new-tab-screen > .new-tab-title,
 .atlas-split-empty > .new-tab-title {
-  grid-row: 2;
   margin: 0 0 22px;
   font-size: clamp(24px, 3vw, 40px);
+  grid-row: 1;
+  align-self: end;
+  margin-bottom: 22px;
 }
 .new-tab-screen > .new-tab-search-wrapper,
 .atlas-split-empty > .new-tab-search-wrapper {
-  grid-row: 3;
-  margin: 0 0 24px;
-}
-.new-tab-screen > .shortcuts-row,
-.new-tab-screen > .atlas-split-tab-picker,
-.atlas-split-empty > .atlas-split-tab-picker {
-  grid-row: 4;
-  align-self: start;
-  margin-top: 0;
+  grid-row: 2;
+  margin: 0;
 }
 .new-tab-search-bar {
   height: 48px;
   box-sizing: border-box;
 }
-
-#newTabScreen.active,
-.atlas-split-empty:not([hidden]) {
-  grid-template-columns: minmax(0, 1fr);
-}
 .new-tab-search-wrapper {
   max-width: 680px;
   min-width: 0;
-}
-.search-suggestions-dropdown {
-  overflow: hidden !important;
+  transition: max-width 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .suggestion-item {
   height: 44px;
@@ -1653,24 +1621,11 @@ a:focus-visible,
 .atlas-split .new-tab-search-wrapper .new-tab-search-bar {
   padding-right: 76px;
 }
-
-.new-tab-search-wrapper {
-  transition: max-width 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
 .atlas-split .new-tab-search-wrapper {
   max-width: 540px;
 }
 .atlas-split[data-atlas-split-animation='exit'] .new-tab-search-wrapper {
   max-width: 680px;
-}
-.new-tab-screen > .shortcuts-row,
-.new-tab-screen > .atlas-split-tab-picker,
-.atlas-split-empty > .atlas-split-tab-picker {
-  grid-column: 1;
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    visibility 0s linear 0.18s;
 }
 .new-tab-screen > .atlas-split-tab-picker,
 .atlas-split-empty > .atlas-split-tab-picker {
@@ -1682,21 +1637,6 @@ a:focus-visible,
   background: var(--bg-card);
   border-radius: 12px;
   padding: 5px;
-}
-.atlas-split .atlas-split-tab-picker {
-  transition-delay: 0s;
-}
-.new-tab-screen > .shortcuts-row {
-  opacity: 1;
-  transform: none;
-  visibility: visible;
-  transition-delay: 0s;
-}
-.atlas-split #newTabShortcutsRow {
-  opacity: 0;
-  transform: translateY(-6px);
-  visibility: hidden;
-  transition-delay: 0s, 0s, 0.18s;
 }
 
 .tab-icon {
@@ -1737,33 +1677,10 @@ a:focus-visible,
   transform: none !important;
 }
 
-#newTabScreen.active,
-.atlas-split-empty:not([hidden]) {
-  grid-template-rows: minmax(0, 1fr) 48px minmax(0, 1fr);
-}
-.new-tab-screen > .new-tab-title,
-.atlas-split-empty > .new-tab-title {
-  grid-row: 1;
-  align-self: end;
-  margin-bottom: 22px;
-}
-.new-tab-screen > .new-tab-search-wrapper,
-.atlas-split-empty > .new-tab-search-wrapper {
-  grid-row: 2;
-  margin: 0;
-}
-.new-tab-screen > .shortcuts-row,
-.new-tab-screen > .atlas-split-tab-picker,
-.atlas-split-empty > .atlas-split-tab-picker {
-  grid-row: 3;
-  margin-top: 24px;
-  align-self: start;
-  justify-content: center;
-}
-
 .atlas-history-panel,
 .atlas-history-list {
   scrollbar-color: transparent transparent;
+  scrollbar-width: none !important;
 }
 .atlas-history-panel::-webkit-scrollbar-track,
 .atlas-history-list::-webkit-scrollbar-track,
@@ -1774,11 +1691,6 @@ a:focus-visible,
 .bottom-bar-hide-btn,
 .bottom-bar-reveal-btn {
   border: none !important;
-}
-
-.atlas-history-panel,
-.atlas-history-list {
-  scrollbar-width: none !important;
 }
 .atlas-history-panel::-webkit-scrollbar,
 .atlas-history-list::-webkit-scrollbar {
@@ -1886,6 +1798,8 @@ a:focus-visible,
 }
 .ondevice-list {
   padding: 0;
+  margin-top: 0;
+  scrollbar-width: none;
 }
 .ondevice-list-frame {
   position: relative;
@@ -1917,10 +1831,6 @@ a:focus-visible,
   opacity: var(--site-data-bottom-edge, 0);
   mask-image: linear-gradient(to top, #000, transparent);
   -webkit-mask-image: linear-gradient(to top, #000, transparent);
-}
-.ondevice-list {
-  margin-top: 0;
-  scrollbar-width: none;
 }
 .ondevice-list::-webkit-scrollbar,
 .site-info-popup::-webkit-scrollbar {
@@ -1966,10 +1876,6 @@ a:focus-visible,
   box-shadow: none !important;
   border: none !important;
 }
-.site-info-popup input:checked + .clean-switch-slider {
-  background: #73797e !important;
-  box-shadow: none;
-}
 .clean-switch input:focus-visible + .clean-switch-slider {
   outline: 2px solid var(--text);
   outline-offset: 3px;
@@ -1983,6 +1889,7 @@ a:focus-visible,
   border: 1px solid #58b878 !important;
   outline: none;
   box-shadow: none;
+  border-color: #58b878 !important;
 }
 #settingWispStatus:empty {
   display: none;
@@ -1991,9 +1898,8 @@ a:focus-visible,
 #settingWispInput {
   border: 1px solid transparent !important;
   box-sizing: border-box;
-}
-#settingWispInput[data-saved='true'] {
-  border-color: #58b878 !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .settings-cards-container {
@@ -2014,10 +1920,6 @@ a:focus-visible,
 .settings-wisp-control {
   width: 290px;
   max-width: 100%;
-}
-#settingWispInput {
-  width: 100%;
-  min-width: 0;
 }
 #settingWispInput[aria-invalid='true'] {
   border-color: #ef6b73 !important;
@@ -2046,6 +1948,11 @@ a:focus-visible,
 .new-tab-screen > .shortcuts-row,
 .new-tab-screen > .atlas-split-tab-picker,
 .atlas-split-empty > .atlas-split-tab-picker {
+  grid-column: 1;
+  grid-row: 3;
+  margin-top: 24px;
+  align-self: start;
+  justify-content: center;
   transition:
     opacity 0.32s ease,
     transform 0.36s cubic-bezier(0.2, 0.7, 0.3, 1),
@@ -2053,6 +1960,9 @@ a:focus-visible,
     visibility 0s linear 0.36s;
 }
 .new-tab-screen > .shortcuts-row {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
   filter: blur(0);
   transition-delay: 0.06s, 0s, 0s, 0s;
 }
@@ -2063,10 +1973,6 @@ a:focus-visible,
 .atlas-split .atlas-split-tab-picker {
   filter: blur(0);
   transition-delay: 0.06s, 0s, 0s, 0s;
-}
-.atlas-split #newTabShortcutsRow {
-  filter: blur(5px);
-  transition-delay: 0s, 0s, 0s, 0.36s;
 }
 .atlas-split[data-atlas-split-animation='exit'] #newTabShortcutsRow {
   opacity: 1;

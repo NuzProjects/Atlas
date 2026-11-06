@@ -6,7 +6,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(18, 22, 28, 0.88);
   border: none !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -16,6 +15,7 @@
   z-index: 1000;
   user-select: none;
   pointer-events: auto;
+  max-width: calc(100vw - 24px);
 }
 
 .home-dock-item {
@@ -27,7 +27,6 @@
   background: transparent !important;
   border: none !important;
   border-radius: 12px;
-  color: #94a3b8;
   cursor: pointer;
   transition: color 0.16s ease;
   padding: 0;
@@ -99,9 +98,6 @@
   height: 24px;
   background: var(--btn-hover);
   flex-shrink: 0;
-}
-.home-bottom-dock {
-  max-width: calc(100vw - 24px);
 }
 
 .home-bottom-dock {

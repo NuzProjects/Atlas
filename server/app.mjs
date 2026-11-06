@@ -1104,6 +1104,7 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   return metadataBootstrap + contentFilterBootstrap + isolationRuntime + darkStyle + interceptScript + html;
 }
 
+const staticEtags = new Map();
 const mimeTypes = {
   html: 'text/html; charset=utf-8',
   js: 'text/javascript; charset=utf-8',
@@ -1737,6 +1738,30 @@ async function appHandler(req, res) {
       stats = await fs.stat(filePath);
     }
 
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    const cacheControl =
+      filePath === path.join(__dirname, 'assets', 'atlas.png')
+        ? 'no-cache'
+        : ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'ico', 'avif'].includes(ext)
+          ? reqUrl.searchParams.has('v')
+            ? 'public, max-age=31536000, immutable'
+            : 'public, max-age=604800'
+          : ['html', 'css', 'js', 'json'].includes(ext)
+            ? 'no-cache'
+            : 'public, max-age=3600';
+    const known = isAppPage ? null : staticEtags.get(filePath);
+    if (
+      known &&
+      known.mtimeMs === stats.mtimeMs &&
+      known.size === stats.size &&
+      req.headers['if-none-match'] === known.etag
+    ) {
+      res.writeHead(304, { ETag: known.etag, 'Cache-Control': cacheControl });
+      res.end();
+      return;
+    }
+
     let data = await fs.readFile(filePath);
     if (isAppPage) {
       res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
@@ -1754,22 +1779,24 @@ async function appHandler(req, res) {
         data.toString().replace('<head>', '<head><script>window.__atlasConfig=' + config + ';</script>')
       );
     }
-    const ext = path.extname(filePath).slice(1).toLowerCase();
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    let etag;
+    if (!isAppPage) {
+      etag = '"' + createHash('sha256').update(data).digest('base64url').slice(0, 27) + '"';
+      staticEtags.delete(filePath);
+      staticEtags.set(filePath, { mtimeMs: stats.mtimeMs, size: stats.size, etag });
+      if (staticEtags.size > 512) staticEtags.delete(staticEtags.keys().next().value);
+      if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304, { ETag: etag, 'Cache-Control': cacheControl });
+        res.end();
+        return;
+      }
+    }
 
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': data.length,
-      'Cache-Control':
-        filePath === path.join(__dirname, 'assets', 'atlas.png')
-          ? 'no-cache'
-          : ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'ico', 'avif'].includes(ext)
-            ? reqUrl.searchParams.has('v')
-              ? 'public, max-age=31536000, immutable'
-              : 'public, max-age=604800'
-            : ['html', 'css', 'js', 'json'].includes(ext)
-              ? 'no-cache'
-              : 'public, max-age=3600',
+      'Cache-Control': cacheControl,
+      ...(etag ? { ETag: etag } : {}),
     });
     res.end(data);
   } catch (err) {

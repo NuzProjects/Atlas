@@ -47,15 +47,14 @@ button:disabled {
 main {
   width: min(100%, 1050px);
   margin: 0 auto;
-  padding: 48px 36px;
   animation: page-fade 0.18s ease;
+  padding: 28px 28px;
 }
 .page-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  margin-bottom: 32px;
 }
 h1 {
   font-size: 32px;
@@ -94,17 +93,13 @@ p {
   font-weight: 600;
   margin: 18px 4px 10px;
 }
-.history-list {
-  background: var(--bg-card);
-  padding: 6px;
-  border-radius: 16px;
-}
 .history-row {
   display: flex;
   align-items: center;
-  gap: 10px;
   overflow: hidden;
   border-radius: 12px;
+  min-height: 44px;
+  gap: 12px;
 }
 .history-row:hover {
   background: var(--btn-bg);
@@ -113,24 +108,15 @@ p {
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 14px;
   flex: 1;
   min-width: 0;
-  padding: 14px;
   background: transparent;
 }
 .history-entry:hover {
   background: transparent;
 }
 .history-entry img {
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
   flex-shrink: 0;
-}
-.history-entry span {
-  min-width: 0;
-  flex: 1;
 }
 .history-entry strong,
 .history-entry small {
@@ -138,15 +124,6 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.history-entry strong {
-  font-size: 13px;
-  font-weight: 600;
-}
-.history-entry small {
-  color: var(--text-muted);
-  margin-top: 5px;
-  font-size: 12px;
 }
 .history-delete {
   background: transparent;
@@ -194,10 +171,6 @@ p {
   padding: 0;
   border-radius: 0;
 }
-.history-row {
-  min-height: 44px;
-  gap: 12px;
-}
 .history-time {
   width: 82px;
   flex: none;
@@ -216,21 +189,23 @@ p {
   border-radius: 4px;
 }
 .history-entry span {
+  min-width: 0;
+  flex: 1;
   display: flex;
   align-items: baseline;
   gap: 12px;
 }
 .history-entry strong {
+  font-weight: 600;
   font-size: 13px;
   flex: 0 1 auto;
 }
 .history-entry small {
+  color: var(--text-muted);
+  margin-top: 5px;
   font-size: 12px;
   margin: 0;
   flex: 0 1 auto;
-}
-main {
-  padding: 28px 28px;
 }
 .page-heading {
   margin-bottom: 20px;

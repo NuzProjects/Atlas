@@ -10,7 +10,7 @@ const iconDirectory = path.join(path.dirname(require.resolve('lucide-static/pack
 const { version } = require('lucide-static/package.json');
 
 const runtimeIcons = ['chevron-down', 'globe', 'history', 'rotate-cw', 'trash-2', 'x'];
-const htmlFiles = ['public/index.html'];
+const htmlFiles = ['public/index.html', 'public/atlas-app.js'];
 const imageIcons = {
   'assets/tab-globe.svg': ['globe', '#9b9fa3'],
   'assets/atlas-history.svg': ['history', '#ffffff'],
