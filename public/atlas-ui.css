@@ -1472,89 +1472,6 @@ textarea:focus-visible,
     transition-duration: 0.001ms !important;
   }
 }
-@media (max-width: 760px) {
-  .bottom-address-wrapper {
-    position: relative;
-    left: auto;
-    transform: none;
-    width: auto;
-    flex: 1;
-  }
-  #settingsView {
-    padding: 24px 20px 105px;
-  }
-  .settings-window {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
-  }
-  .settings-sidebar {
-    position: static;
-    width: 100%;
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .settings-section-title {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  .settings-cards-container {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  .settings-nav-list {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .settings-nav-item {
-    flex: 1;
-    width: auto;
-    padding: 10px;
-  }
-  .settings-nav-item svg {
-    display: none;
-  }
-  .settings-content-pane {
-    padding: 0;
-  }
-  .settings-row {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .settings-control {
-    max-width: 100%;
-  }
-  .settings-shortcut-controls {
-    justify-content: flex-start;
-  }
-}
-@media (max-width: 480px) {
-  .search-engine-control {
-    width: 131px;
-  }
-  .search-engine-control .atlas-dropdown-button {
-    gap: 6px;
-    padding-left: 7px;
-    font-size: 11px;
-  }
-  .search-wrapper .search-bar,
-  .new-tab-search-wrapper .new-tab-search-bar {
-    padding-right: 146px;
-  }
-  .search-engine-control .atlas-dropdown-icon {
-    width: 14px;
-    height: 14px;
-  }
-  .bottom-bar {
-    gap: 6px;
-    padding: 0 8px;
-  }
-  .nav-buttons {
-    gap: 2px;
-  }
-  .nav-icon-btn {
-    width: 28px;
-  }
-}
 .atlas-history-panel {
   display: flex;
   flex-direction: column;
@@ -2128,17 +2045,6 @@ textarea:focus-visible,
   }
   .settings-wisp-control {
     width: min(290px, 100%);
-  }
-}
-@container (max-width: 360px) {
-  .settings-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .settings-control,
-  .settings-wisp-control {
-    width: 100%;
-    max-width: 100%;
   }
 }
 .new-tab-screen > .shortcuts-row,

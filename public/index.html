@@ -302,7 +302,7 @@
         }
       }
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
     <title>Atlas</title>
     <link rel="icon" id="siteFavicon" href="/assets/atlas.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -557,25 +557,6 @@
         height: 12px;
         color: #94a3b8;
         pointer-events: none;
-      }
-
-      @media (max-width: 480px) {
-        .search-engine-control {
-          width: 111px;
-        }
-        .search-wrapper .search-bar,
-        .new-tab-search-wrapper .new-tab-search-bar {
-          padding-left: 40px;
-          padding-right: 130px;
-          font-size: 13px;
-        }
-        .search-leading-icon {
-          left: 14px;
-          width: 17px;
-        }
-        .welcome-title {
-          font-size: 38px;
-        }
       }
 
       #browserView {
@@ -2804,6 +2785,7 @@
     </style>
     <link rel="stylesheet" href="/atlas-ui.css?v=45" />
     <link rel="stylesheet" href="/atlas-dock.css" />
+    <link rel="stylesheet" href="/atlas-mobile.css?v=1" />
     <script defer src="/atlas-tooltips.js"></script>
   </head>
   <body class="grid-bg">
@@ -4036,7 +4018,7 @@
                 animateAtlasContent(t.iframe, 'atlas-frame-enter');
               newTabScreen.classList.remove('active');
               bottomAddressBar.value = t.url;
-              if (bottomBar) bottomBar.style.display = 'flex';
+              if (bottomBar) bottomBar.style.display = '';
               if (revealBottomBarBtn) revealBottomBarBtn.style.display = '';
               if (viewportContainer) {
                 viewportContainer.style.height = '';

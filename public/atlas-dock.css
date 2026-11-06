@@ -103,23 +103,6 @@
 .home-bottom-dock {
   max-width: calc(100vw - 24px);
 }
-@media (max-width: 520px) {
-  .home-bottom-dock {
-    gap: 7px;
-    padding: 8px 10px;
-  }
-  .home-bottom-dock .home-dock-item {
-    width: 32px;
-  }
-  .atlas-dock-clock {
-    width: 78px;
-    font-size: 11px;
-  }
-  .atlas-dock-delay {
-    width: 58px;
-    font-size: 11px;
-  }
-}
 
 .home-bottom-dock {
   background: var(--bg-card) !important;
@@ -130,11 +113,6 @@
 }
 .home-dock-item:focus-visible {
   outline: none !important;
-}
-@media (max-width: 480px) {
-  .home-bottom-dock {
-    bottom: 16px;
-  }
 }
 
 .home-dock-item {

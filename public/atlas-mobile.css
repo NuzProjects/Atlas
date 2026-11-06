@@ -1,0 +1,277 @@
+@media (max-width: 760px) {
+  #homeSearchInput,
+  #newTabSearchInput,
+  #bottomAddressBar,
+  #settingsSearchInput,
+  .settings-cards-container input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  .settings-cards-container textarea,
+  #addShortcutModal input,
+  #wssModal input {
+    font-size: 16px;
+  }
+
+  #homeView {
+    overflow-y: auto;
+    justify-content: center;
+    justify-content: safe center;
+    padding-bottom: 96px;
+  }
+  .new-tab-screen {
+    overflow-y: auto;
+  }
+
+  .home-bottom-dock {
+    bottom: 16px;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+  .home-bottom-dock .home-dock-item {
+    width: 44px;
+    height: 44px;
+  }
+  .atlas-dock-clock {
+    width: 78px;
+    font-size: 11px;
+  }
+  .atlas-dock-delay {
+    width: 58px;
+    font-size: 11px;
+  }
+
+  .tab-bar {
+    padding: 0 8px;
+  }
+  .tab-item {
+    min-height: 36px;
+  }
+  .tab-close {
+    width: 28px;
+    height: 28px;
+    flex: none;
+  }
+  .new-tab-btn {
+    width: 36px;
+    height: 36px;
+    flex: none;
+  }
+
+  #browserView .viewport-container {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+    margin: 6px 8px 122px;
+  }
+  #browserView.bottom-bar-hidden .viewport-container {
+    height: auto;
+    margin-bottom: 8px;
+  }
+  #browserView .bottom-bar {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: 44px 44px;
+    gap: 4px 0;
+    padding: 8px;
+    border-radius: 20px !important;
+  }
+  #browserView .bottom-left-controls,
+  #browserView .nav-buttons {
+    display: contents;
+  }
+  #browserView .bottom-address-wrapper {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    position: relative;
+    left: auto;
+    transform: none;
+    width: auto;
+    height: 44px;
+    padding: 0 6px;
+  }
+  #browserView .bottom-address-bar {
+    height: 44px;
+    min-width: 0;
+  }
+  #browserView .address-action-btn {
+    width: 36px;
+    height: 36px;
+  }
+  #browserView .bottom-bar .home-icon-btn,
+  #browserView .bottom-bar .nav-icon-btn {
+    grid-row: 2;
+    justify-self: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  #atlasSplitButton {
+    display: none;
+  }
+  #browserView .site-info-popup {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 180px);
+  }
+  .atlas-history-panel {
+    width: calc(100vw - 16px);
+    max-height: min(440px, calc(100dvh - 180px));
+  }
+  .atlas-history-heading button {
+    width: 36px;
+    height: 36px;
+  }
+
+  #settingsView {
+    height: 100%;
+    padding: 20px 16px 104px;
+  }
+  .settings-window {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .settings-sidebar {
+    position: static;
+    width: 100%;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .settings-section-title {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .settings-cards-container {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .settings-nav-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0 -16px;
+    padding: 0 16px;
+    scroll-padding-inline: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+  }
+  .settings-nav-list::-webkit-scrollbar {
+    display: none;
+  }
+  .settings-nav-item {
+    flex: none;
+    width: auto;
+    min-height: 40px;
+    padding: 10px 14px;
+    scroll-snap-align: start;
+  }
+  .settings-nav-item svg {
+    display: none;
+  }
+  .settings-content-pane {
+    padding: 0;
+  }
+  .settings-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    padding: 16px;
+  }
+  .settings-row-text {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .settings-control {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
+  }
+  .settings-row:has(input[type='text'], input[type='url'], .settings-wisp-control) .settings-control,
+  .settings-wisp-control {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .settings-shortcut-controls {
+    justify-content: flex-start;
+  }
+  .settings-action-btn,
+  .settings-cards-container .atlas-dropdown-button {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-engine-control {
+    width: 58px;
+  }
+  .search-engine-control .atlas-dropdown-label {
+    display: none;
+  }
+  .search-engine-control .atlas-dropdown-button {
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 8px;
+  }
+  .search-wrapper .search-bar,
+  .new-tab-search-wrapper .new-tab-search-bar {
+    padding-left: 40px;
+    padding-right: 76px;
+  }
+  .search-leading-icon {
+    left: 14px;
+    width: 17px;
+  }
+  .welcome-title {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 500px) {
+  #browserView .bottom-bar {
+    grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px 44px;
+    grid-template-rows: 44px;
+    gap: 0 4px;
+    padding: 4px 8px;
+  }
+  #browserView .bottom-address-wrapper {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  #browserView .bottom-bar .home-icon-btn,
+  #browserView .bottom-bar .nav-icon-btn {
+    grid-row: 1;
+  }
+  #bottomHomeBtn {
+    grid-column: 1;
+  }
+  #atlasHistoryButton {
+    grid-column: 2;
+  }
+  #navBack {
+    grid-column: 4;
+  }
+  #navForward {
+    grid-column: 5;
+  }
+  #navReload {
+    grid-column: 6;
+  }
+  #browserView .viewport-container {
+    margin-bottom: 66px;
+  }
+  #homeView {
+    padding-top: 16px;
+    padding-bottom: 80px;
+  }
+  .home-bottom-dock {
+    bottom: 8px;
+  }
+}

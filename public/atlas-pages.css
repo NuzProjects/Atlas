@@ -182,22 +182,6 @@ p {
     opacity: 1;
   }
 }
-@media (max-width: 700px) {
-  main {
-    padding: 28px 18px;
-  }
-  .page-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-  h1 {
-    font-size: 28px;
-  }
-  #pageTools {
-    gap: 6px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before {
@@ -245,15 +229,6 @@ p {
   margin: 0;
   flex: 0 1 auto;
 }
-@media (max-width: 600px) {
-  .history-time {
-    width: 64px;
-    font-size: 11px;
-  }
-  .history-entry span {
-    gap: 6px;
-  }
-}
 main {
   padding: 28px 28px;
 }
@@ -270,4 +245,40 @@ body,
 ::-webkit-scrollbar-track,
 ::-webkit-scrollbar-thumb {
   background: transparent;
+}
+@media (max-width: 700px) {
+  main {
+    padding: 24px 16px;
+  }
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+  #pageTools {
+    gap: 6px;
+  }
+  #historySearch {
+    font-size: 16px;
+  }
+  .history-time {
+    width: 56px;
+    font-size: 11px;
+  }
+  .history-entry span {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+  .history-entry strong,
+  .history-entry small {
+    flex: none;
+  }
+  .history-delete {
+    min-width: 40px;
+    min-height: 40px;
+  }
 }
