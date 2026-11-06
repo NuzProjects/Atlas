@@ -25,7 +25,6 @@ export function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 }
 export function proxyCookies(headers) {
-
   const values = headers['set-cookie'];
   return (Array.isArray(values) ? values : values ? [values] : []).map(cookie => cookie
     .replace(/;\s*Domain=[^;]*/ig, '')
@@ -56,7 +55,7 @@ export function upstreamHeaders(req, target, config) {
       headers.Referer = original;
       if (req.headers.origin === referer.origin) headers.Origin = new URL(original).origin;
     } else if(upstreamOrigins.has(referer.origin)) headers.Referer=upstreamOrigins.get(referer.origin)+'/';
-  } catch {                                          }
+  } catch {}
 
   if(headers.Origin && headers.Origin!==new URL(target).origin && !['GET','HEAD','OPTIONS'].includes(req.method)) delete headers.cookie;
   return headers;
@@ -71,7 +70,7 @@ export function responseHeaders(req, response, config, target) {
   const allowed = response.headers['access-control-allow-origin'];
   if (allowed === '*') result['Access-Control-Allow-Origin'] = '*';
   else if (allowed && req.headers.origin) {
-    try { if (contentOrigin(allowed, config) === req.headers.origin) result['Access-Control-Allow-Origin'] = req.headers.origin; } catch {                               }
+    try { if (contentOrigin(allowed, config) === req.headers.origin) result['Access-Control-Allow-Origin'] = req.headers.origin; } catch {}
   }
   if (result['Access-Control-Allow-Origin'] === req.headers.origin && response.headers['access-control-allow-credentials'] === 'true') result['Access-Control-Allow-Credentials'] = 'true';
   result.Vary = 'Origin';

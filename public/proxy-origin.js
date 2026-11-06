@@ -1,4 +1,3 @@
-
 (function(root) {
   function hash(text) {
     const bytes = new TextEncoder().encode(text), length = bytes.length;

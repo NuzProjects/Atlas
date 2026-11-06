@@ -624,7 +624,6 @@ function exportAtlasSettings(storage) {
       result.settings[name] = ATLAS_BOOLEAN_SETTINGS.has(name) && ['true','false'].includes(value) ? value === 'true' : value;
     } else if (key === 'wisp_server_url') result.relay = value;
     else {
-
       try { result.data[key] = {encoding:'json',value:JSON.parse(value)}; }
       catch { result.data[key] = {encoding:'text',value}; }
     }
@@ -711,14 +710,12 @@ if (initialRoutePath === '/settings') switchView('settings', false);
 else switchView('home', false);
 
 function openBlankTab() {
-
   const firefox=/Firefox\//.test(navigator.userAgent);
   const blank=window.open(firefox?'about:blank':' ', '_blank');
   if(!firefox)blank?.stop();
   return blank;
 }
 function writeTab(tab, html) {
-
   const write = tab.Function('html','resolve','reject','try { document.open(); document.write(html); document.close(); resolve(); } catch(error) { reject(error); }');
   return new Promise((resolve,reject)=>tab.setTimeout(write,0,html,resolve,reject));
 }
@@ -793,7 +790,7 @@ async function openAtlasBlank() {
       if (window.opener) window.close();
       return true;
     } catch {
-      try { blank.close(); } catch {                                      }
+      try { blank.close(); } catch {}
       return false;
     } finally {
       clearTimeout(timer);

@@ -32,14 +32,12 @@ async function resolve_with_fallback(resolve_first, resolve_after, hostname) {
 }
 
 async function perform_lookup(hostname) {
-
   if (options.dns_method === "lookup") {
     let result = await dns.lookup(hostname, {order: options.dns_result_order});
     return result.address;
   }
 
   else if (options.dns_method === "resolve") {
-
     if (!resolver) resolver = new dns.Resolver();
 
     if (options.dns_servers !== dns_servers) {
@@ -214,7 +212,6 @@ export class NodeUDPSocket {
         resolve();
       });
       socket.on("message", (data) => {
-
         if (!this.data_queue.put_now(data)) this.dropped_packets++;
       });
       socket.on("error", error => {
@@ -244,7 +241,7 @@ export class NodeUDPSocket {
     this.closed = true;
     this.connected = false;
     this.data_queue.close();
-    try { this.socket?.close(); } catch {                      }
+    try { this.socket?.close(); } catch {}
     this.socket = null;
   }
 

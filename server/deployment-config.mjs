@@ -1,7 +1,7 @@
 export function deploymentConfig(env = process.env) {
   const production = env.NODE_ENV === 'production';
   const port = Number.parseInt(env.PORT || '8080', 10);
-  const host = env.HOST || (production ? '127.0.0.1' : '::');
+  const host = env.HOST || '127.0.0.1';
   const localWisp = `ws://127.0.0.1:${port}/wisp/`;
   const contentMode = env.ATLAS_CONTENT_MODE || 'shared';
   if (!['shared','isolated'].includes(contentMode)) throw new Error('ATLAS_CONTENT_MODE must be shared or isolated');

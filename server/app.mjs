@@ -1,4 +1,3 @@
-
 import http from "node:http";
 import https from "node:https";
 import tls from "node:tls";
@@ -50,6 +49,7 @@ wisp.options.allow_loopback_ips = deployment.allowPrivate;
 if (deployment.production) {
   wisp.options.stream_limit_total = 64;
   wisp.options.stream_limit_per_host = 16;
+  wisp.options.port_blacklist = [25, 465, 587];
 }
 
 process.on('uncaughtException', error => { console.error('Fatal application exception; restarting',error?.code || error?.name || 'unknown',error?.stack?.split('\n').slice(1,4).join('\n') || ''); process.exit(1); });
@@ -140,7 +140,6 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
     }, timeoutMs);
 
     const onConnected = () => {
-
       const pathWithQuery = parsed.pathname + (parsed.search || "");
 
       const headers = {
@@ -165,7 +164,6 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
         maxHeaderSize: 65536,
         agent
       }, async (res) => {
-
         if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && !options.noRedirect) {
           clearTimeout(timer);
           try {
@@ -279,7 +277,6 @@ function resolveToProxy(rawUrl, targetBaseUrl, wispEndpoint, isNavigation = fals
 }
 
 function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFingerprint = true) {
-
   const contentFilterBootstrap = `<script>${contentFilterScript}
 (function(){
   var blocked=false;
@@ -487,8 +484,6 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   };
   var isAdOrTracker = function(url) { return (${isAdOrTracker.toString()})(url, targetUrl); };
 
-  // Optional analytics failures must not abort a site's game-startup handler.
-  // Runtime errors and failures of non-tracker scripts retain normal reporting.
   window.addEventListener('error', function(event) {
     var script = event.target;
     if (script instanceof HTMLScriptElement && isAdOrTracker(unwrapProxyUrl(script.src))) event.stopImmediatePropagation();
@@ -666,7 +661,6 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   var atlasNativePlay = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function() { trackAtlasMedia(this); return atlasNativePlay.apply(this, arguments); };
   if (window.AudioNode) {
-
     var atlasNativeConnect = AudioNode.prototype.connect, atlasNativeDisconnect = AudioNode.prototype.disconnect;
     AudioNode.prototype.connect = function(destination) {
       if (destination !== this.context.destination || (window.OfflineAudioContext && this.context instanceof OfflineAudioContext)) return atlasNativeConnect.apply(this, arguments);
@@ -782,7 +776,6 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
     };
   } catch(e) {}
 
-  // Resolve document-scoped encrypted links without exposing the codec key.
   Object.defineProperty(window, '__atlasLinkDestination', {value: function(anchor) { return unwrapProxyUrl(anchor.getAttribute('href') || anchor.getAttribute('data-atlas-href') || ''); }});
   var anchorGet = Element.prototype.getAttribute;
   var anchorSet = Element.prototype.setAttribute;
@@ -1061,7 +1054,6 @@ async function appHandler(req, res) {
       res.writeHead(503, { 'Content-Type':'text/plain' }); res.end('Isolated content hosting must be configured before browsing.'); return;
     }
   } else if ((isolated || !deployment.proxyOriginTemplate) && !['/atlas-origin.js','/proxy-origin.js','/atlas-url-crypto.js','/atlas-page-storage.js'].includes(reqUrl.pathname)) {
-
     try {
       let original;
       if (!deployment.proxyOriginTemplate && req.headers.referer) {
@@ -1098,44 +1090,44 @@ async function appHandler(req, res) {
   }
 
   if (reqUrl.pathname === "/api/suggestions") {
-    const q = (reqUrl.searchParams.get("q") || "").trim();
+    const q = (reqUrl.searchParams.get("q") || "").trim().slice(0, 256);
     if (!q) {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify([]));
       return;
     }
 
+    let answered = false;
+    const reply = suggestions => {
+      if (answered || res.headersSent || res.destroyed) return;
+      answered = true;
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      res.end(JSON.stringify(suggestions));
+    };
     try {
       const suggestUrl = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(q)}`;
       const sReq = https.get(suggestUrl, { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 4000 }, (sRes) => {
         let raw = "";
-        sRes.on("data", chunk => raw += chunk);
+        sRes.setEncoding("utf8");
+        sRes.on("data", chunk => {
+          raw += chunk;
+          if (raw.length > 65536) { reply([]); sReq.destroy(); }
+        });
+        sRes.on("error", () => reply([]));
         sRes.on("end", () => {
           try {
             const parsed = JSON.parse(raw);
             const suggestions = Array.isArray(parsed) && Array.isArray(parsed[1]) ? parsed[1] : [];
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify(suggestions.slice(0, 8)));
+            reply(suggestions.filter(value => typeof value === "string").slice(0, 8));
           } catch {
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify([]));
+            reply([]);
           }
         });
       });
-
-      sReq.on("error", () => {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify([]));
-      });
-
-      sReq.on("timeout", () => {
-        sReq.destroy();
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify([]));
-      });
+      sReq.on("error", () => reply([]));
+      sReq.on("timeout", () => { reply([]); sReq.destroy(); });
     } catch {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify([]));
+      reply([]);
     }
     return;
   }
@@ -1153,7 +1145,6 @@ async function appHandler(req, res) {
       status: "online",
       version: "0.5.0",
       local_wisp: defaultWisp,
-      node_version: process.version,
       port: PORT
     }));
     return;
@@ -1572,8 +1563,8 @@ server.listen(PORT, deployment.host, () => {
 
 const fallbackServer = http.createServer({maxHeaderSize:1024*1024},handleRequest);
 fallbackServer.on("upgrade", (req, socket, head) => {
-  routeAtlasUpgrade(req, socket, head).catch(() => socket.destroy());
+  requestContext.run({origin:requestOrigin(req)},()=>routeAtlasUpgrade(req, socket, head)).catch(() => socket.destroy());
 });
-if (deployment.mirror) fallbackServer.listen(8081, "0.0.0.0", () => {
+if (deployment.mirror) fallbackServer.listen(8081, "127.0.0.1", () => {
   console.log(`IPv4 Mirror: http://127.0.0.1:8081 / ws://127.0.0.1:8081/wisp/`);
 }).on("error", () => {});

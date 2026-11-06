@@ -1,4 +1,3 @@
-
 let atlasSplitPair = null;
 let atlasSplitGroupElement = null;
 let atlasSplitRatio = 50;
@@ -89,7 +88,6 @@ function animateAtlasHistoryRemoval(row) {
 }
 
 function atlasAvailableSplitTabs(blankId) {
-
   return tabs.filter(tab => !tab.isClosing && !tab.isNewTab && tab.id !== activeTabId && tab.id !== blankId && !atlasSplitPair?.includes(tab.id));
 }
 
@@ -201,9 +199,6 @@ function openAtlasHistory() {
 }
 atlasHistoryButton.onclick = openAtlasHistory;
 
-function prepareAtlasSplitActivation(tabId, previousId) {
-
-}
 function setAtlasSplitRatio(ratio) {
   atlasSplitRatio = Math.max(25, Math.min(75, ratio));
   viewportContainer.style.setProperty('--atlas-split-position', atlasSplitRatio + '%');
@@ -212,7 +207,6 @@ function setAtlasSplitRatio(ratio) {
   syncAtlasSplitAddress();
 }
 function renderAtlasSplitTabs() {
-
   if (tabList.dataset.atlasSplitHeadersDetached === 'true') { renderAtlasSplitChoices(); return; }
   const ids = atlasSplitPair || [];
   const items = ids.map(id => tabList.querySelector(`.tab-item[data-tab-id="${id}"]`));
@@ -348,7 +342,6 @@ function animateAtlasSplitHeaders(phase, before, removeBlank, pane) {
   const group = atlasSplitGroupElement;
   let widths;
   if (phase === 'exit') {
-
     const measureBar = tabList.parentNode.cloneNode(true);
     const measure = measureBar.querySelector('.tab-list');
     [measureBar, ...measureBar.querySelectorAll('[id]')].forEach(node => node.removeAttribute('id'));
@@ -560,7 +553,6 @@ function runAtlasSplitTransition(update, phase, pane = 'right', removeBlank = fa
   const pendingAnimations = atlasSplitAnimations.map(({animation})=>animation.finished).filter(finished=>finished?.then);
   const geometryDone = pendingAnimations.length ? Promise.all(pendingAnimations) : null;
   if (geometryDone?.then) {
-
     geometryDone.then(complete, () => {});
   } else {
     atlasSplitTimer = setTimeout(complete, 230);

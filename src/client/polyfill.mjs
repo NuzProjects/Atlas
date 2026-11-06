@@ -40,7 +40,6 @@ export class WispWebSocket extends EventTarget {
 	};
 
   init_connection() {
-
     this.connection = _wisp_connections[this.real_url];
 
     if (!this.connection) {

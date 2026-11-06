@@ -1,5 +1,3 @@
-
-
 const text_encoder = new TextEncoder();
 const encode_text = text_encoder.encode.bind(text_encoder);
 const text_decoder = new TextDecoder();
@@ -210,7 +208,6 @@ export const stream_types = {
 }
 
 export const close_reasons = {
-
   Unknown: 0x01,
   Voluntary: 0x02,
   NetworkError: 0x03,

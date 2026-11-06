@@ -44,7 +44,6 @@ class ClientStream {
     if ((this.ws.bufferedAmount || 0) > 8 * 1024 * 1024) throw new Error('Wisp connection send buffer exceeded');
 
     if (this.buffer_size > 0 || this.stream_type === stream_types.UDP) {
-
       let packet = new WispPacket({
         type: packet_types.DATA,
         stream_id: this.stream_id,
@@ -180,7 +179,6 @@ export class ClientConnection {
     this.ws.onerror = () => {
       if (this.ws !== ws) return;
       if (this.wisp_version === 2 && this.connecting && !this.info_received) {
-
         this.ws.onclose = null;
         this.ws.onerror = null;
         this.ws.onmessage = null;

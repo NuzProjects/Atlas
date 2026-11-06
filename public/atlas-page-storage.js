@@ -1,5 +1,3 @@
-
-
 (function(root) {
   function initialize(target) {
     if(root.__atlasPageStorage)return;
@@ -24,7 +22,7 @@
           getOwnPropertyDescriptor:(_object,key)=>keys().includes(key)?{configurable:true,enumerable:true,writable:true,value:methods.getItem(key)}:undefined
         });
         Object.defineProperty(root,name,{configurable:true,get:()=>view});
-      } catch {                                                                     }
+      } catch {}
     }
     try {
       const native=Object.getOwnPropertyDescriptor(root.Document.prototype,'cookie');
@@ -33,13 +31,13 @@
         get:()=>native.get.call(root.document).split(';').map(value=>value.trim()).filter(value=>value.startsWith(prefix)).map(value=>value.slice(prefix.length)).join('; '),
         set:value=>native.set.call(root.document,prefix+String(value).replace(/;\s*(?:Domain|Path)=[^;]*/ig,'')+'; Path=/')
       });
-    } catch {                                                                         }
+    } catch {}
     try {
       const factory=root.indexedDB;
       const methods={open:(name,...args)=>factory.open(prefix+name,...args),deleteDatabase:name=>factory.deleteDatabase(prefix+name),
         databases:async()=> (await factory.databases()).filter(db=>db.name?.startsWith(prefix)).map(db=>({...db,name:db.name.slice(prefix.length)}))};
       Object.defineProperty(root,'indexedDB',{configurable:true,value:new Proxy(factory,{get:(object,key)=>key in methods?methods[key]:typeof object[key]==='function'?object[key].bind(object):object[key]})});
-    } catch {                                                       }
+    } catch {}
   }
   root.AtlasPageStorage={initialize};
 })(globalThis);

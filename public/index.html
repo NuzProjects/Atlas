@@ -3269,7 +3269,6 @@
     function activateTab(tabId) {
       const changedTab = activeTabId !== tabId;
       const previousWasNewTab = tabs.find(tab => tab.id === activeTabId)?.isNewTab && newTabScreen.classList.contains('active');
-      if (typeof prepareAtlasSplitActivation === 'function') prepareAtlasSplitActivation(tabId, activeTabId);
       activeTabId = tabId;
       const currentTab = tabs.find(t => t.id === tabId);
       if (!currentTab) return;
@@ -4431,7 +4430,7 @@
             <div class="ondevice-item-icon">
               ${item.isG ? googleGIcon : globeIcon}
             </div>
-            <div class="ondevice-item-domain">${item.domain}</div>
+            <div class="ondevice-item-domain">${escapeHtml(item.domain)}</div>
           </div>
           <div class="ondevice-item-actions">
             <button class="ondevice-action-btn ondevice-delete-btn">
@@ -4785,7 +4784,7 @@
             atlasSiteFavicons.set(tab.url, icon.href);
             if (atlasSiteFavicons.size > 200) atlasSiteFavicons.delete(atlasSiteFavicons.keys().next().value);
           }
-        } catch {                                                                     }
+        } catch {}
         renderTabs();
         if (changedUrl) recordAtlasVisit(tab);
         if (tab.id === activeTabId) { bottomAddressBar.value = tab.url; updateBookmarkStar(); updateSiteInfo(); }
@@ -4832,7 +4831,7 @@
             tab.favicon = icon.href;
             renderTabs();
           }
-        } catch {                                               }
+        } catch {}
       }
 
       if (e.data && e.data.type === "__network_nav_url" && e.data.url) {
@@ -4979,7 +4978,7 @@
           if (window.__atlasBlankBoot.session && !restoreAtlasSession(window.__atlasBlankBoot.session)) return;
           const launcher=window.__atlasBlankBoot.embedded?window.parent:window.opener;
           launcher?.postMessage({type:'__atlas_blank_ready', token:window.__atlasBlankBoot.token}, atlasAppOrigin());
-        } catch {                                                                 }
+        } catch {}
       }, {once:true});
     }
   </script>

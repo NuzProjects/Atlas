@@ -1,4 +1,3 @@
-
 let atlasSessionRestoring = false;
 const atlasSessionId = crypto.randomUUID();
 function readAtlasSession(value) {

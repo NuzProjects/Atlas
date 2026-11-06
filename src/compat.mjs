@@ -1,5 +1,3 @@
-
-
 export const global_this = globalThis;
 
 export { WebSocket, WebSocketServer } from "ws";

@@ -175,7 +175,6 @@ export class ServerConnection {
   }
 
   async setup_wisp_v2() {
-
     let ext_buffer = serialize_extensions(this.wisp_extensions);
     let info_packet = new WispPacket({
       type: InfoPayload.type,
@@ -268,7 +267,6 @@ export class ServerConnection {
     let stream = this.streams[packet.stream_id];
 
     if (stream == null && packet.type == DataPayload.type) {
-
       logging.debug(`(${this.conn_id}) ignored DATA for a closed stream`);
       return;
     }
@@ -293,7 +291,6 @@ export class ServerConnection {
     }
 
     else if (packet.type == ClosePayload.type) {
-
       await this.close_stream(packet.stream_id, packet.payload.reason);
     }
   }
@@ -311,7 +308,6 @@ export class ServerConnection {
       }
 
       try {
-
         await this.route_packet(new WispBuffer(new Uint8Array(data)));
       }
       catch (error) {
@@ -325,7 +321,6 @@ export class ServerConnection {
   }
 
   async cleanup() {
-
     for (let stream_id of Object.keys(this.streams)) {
       await this.close_stream(stream_id);
     }

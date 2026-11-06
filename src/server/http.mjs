@@ -28,7 +28,7 @@ export function routeRequest(request, socket, head, conn_options={}) {
   assert_on_node();
   if (request.headers?.["sec-websocket-protocol"]?.split(',').map(value => value.trim()).includes('wisp-v2') && options.wisp_version === 2)
     conn_options.wisp_version = 2;
-  else 
+  else
     conn_options.wisp_version = 1;
 
   if (request instanceof compat.http.IncomingMessage) {
@@ -46,7 +46,7 @@ async function create_connection(ws, path, request, conn_options) {
   let client_ip = request.socket?.remoteAddress;
   let real_ip = parse_real_ip(request.headers || {}, client_ip);
   logging.debug(`new transport connection from ${real_ip || 'local'}`);
-  
+
   let connection;
   try {
     if (path.endsWith("/")) {
@@ -54,7 +54,7 @@ async function create_connection(ws, path, request, conn_options) {
       await connection.setup();
       await connection.run();
     }
-  
+
     else {
       let wsproxy = new WSProxyConnection(ws, path, conn_options);
       await wsproxy.setup();

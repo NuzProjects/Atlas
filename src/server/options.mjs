@@ -1,5 +1,4 @@
 export const options = {
-
   hostname_blacklist: null,
   hostname_whitelist: null,
   port_blacklist: null,

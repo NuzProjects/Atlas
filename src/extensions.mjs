@@ -31,7 +31,7 @@ export class BaseExtension {
       extension.payload = ext_class.Client.parse(buffer.slice(5));
     else if (role === "server")
       extension.payload = ext_class.Server.parse(buffer.slice(5));
-    else 
+    else
       throw TypeError("invalid role");
     return extension;
   }
@@ -126,7 +126,7 @@ export function parse_extensions(payload_buffer, valid_extensions, role) {
     let ext_payload = payload_buffer.slice(0, 5 + ext_len);
     let ext_class;
     for (let extension of valid_extensions) {
-      if (extension.id !== ext_id) 
+      if (extension.id !== ext_id)
         continue;
       ext_class = extension.constructor;
       break;
