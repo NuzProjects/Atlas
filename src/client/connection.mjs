@@ -1,4 +1,4 @@
-import * as compat from "../compat.mjs";
+import * as compat from '../compat.mjs';
 
 import {
   packet_classes,
@@ -9,10 +9,10 @@ import {
   ConnectPayload,
   DataPayload,
   ClosePayload,
-  InfoPayload
-} from "../packet.mjs";
+  InfoPayload,
+} from '../packet.mjs';
 
-import { MOTDExtension, UDPExtension, serialize_extensions, parse_extensions } from "../extensions.mjs";
+import { MOTDExtension, UDPExtension, serialize_extensions, parse_extensions } from '../extensions.mjs';
 
 class ClientStream {
   constructor(hostname, port, websocket, connection, stream_id, stream_type, buffer_size) {
@@ -48,13 +48,12 @@ class ClientStream {
         type: packet_types.DATA,
         stream_id: this.stream_id,
         payload: new DataPayload({
-          data: new WispBuffer(data)
-        })
+          data: new WispBuffer(data),
+        }),
       });
       this.ws.send(packet.serialize().bytes);
       if (this.stream_type === stream_types.TCP) this.buffer_size--;
-    }
-    else {
+    } else {
       if (this.queued_bytes + data.byteLength > 4 * 1024 * 1024) throw new Error('Wisp stream send buffer exceeded');
       this.send_buffer.push(data.slice());
       this.queued_bytes += data.byteLength;
@@ -78,8 +77,8 @@ class ClientStream {
       type: packet_types.CLOSE,
       stream_id: this.stream_id,
       payload: new ClosePayload({
-        reason: reason
-      })
+        reason: reason,
+      }),
     });
     this.open = false;
     this.send_buffer = [];
@@ -97,7 +96,10 @@ class ClientStream {
       await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
-  pause() { this.connection.paused_streams?.add(this.stream_id); this.ws.pause?.(); }
+  pause() {
+    this.connection.paused_streams?.add(this.stream_id);
+    this.ws.pause?.();
+  }
   resume() {
     this.connection.paused_streams?.delete(this.stream_id);
     if (!this.connection.paused_streams?.size) this.ws.resume?.();
@@ -105,9 +107,9 @@ class ClientStream {
 }
 
 export class ClientConnection {
-  constructor(wisp_url, {wisp_version, wisp_extensions} = {}) {
-    if (!wisp_url.endsWith("/")) {
-      throw new TypeError("wisp endpoints must end with a trailing forward slash");
+  constructor(wisp_url, { wisp_version, wisp_extensions } = {}) {
+    if (!wisp_url.endsWith('/')) {
+      throw new TypeError('wisp endpoints must end with a trailing forward slash');
     }
 
     this.wisp_url = wisp_url;
@@ -141,30 +143,39 @@ export class ClientConnection {
 
   add_extensions() {
     this.wisp_extensions = [];
-    this.wisp_extensions.push(new UDPExtension({client_config: {}}));
-    this.wisp_extensions.push(new MOTDExtension({client_config: {}}));
+    this.wisp_extensions.push(new UDPExtension({ client_config: {} }));
+    this.wisp_extensions.push(new MOTDExtension({ client_config: {} }));
   }
 
   connect_ws() {
     this.info_received = false;
-    this.server_exts = {}; this.client_exts = {};
+    this.server_exts = {};
+    this.client_exts = {};
     this.udp_enabled = this.wisp_version === 1;
-    let subprotocol = this.wisp_version === 2 ? "wisp-v2" : undefined;
+    let subprotocol = this.wisp_version === 2 ? 'wisp-v2' : undefined;
     this.ws = new compat.WebSocket(this.wisp_url, subprotocol);
-    this.ws.binaryType = "arraybuffer";
+    this.ws.binaryType = 'arraybuffer';
     this.connecting = true;
     const ws = this.ws;
     clearTimeout(this.handshake_timer);
     this.handshake_timer = setTimeout(() => {
       if (this.ws !== ws || this.connected) return;
-      this.cleanup(); ws.close(); this.onerror(new Error('Wisp handshake timeout'));
+      this.cleanup();
+      ws.close();
+      this.onerror(new Error('Wisp handshake timeout'));
     }, 10000);
     this.handshake_timer.unref?.();
 
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = event => {
       if (this.ws !== ws) return;
-      try { this.on_ws_msg(event); }
-      catch { this.cleanup(); ws.close(1002, 'Invalid Wisp packet'); this.onerror(new Error('Invalid Wisp packet')); return; }
+      try {
+        this.on_ws_msg(event);
+      } catch {
+        this.cleanup();
+        ws.close(1002, 'Invalid Wisp packet');
+        this.onerror(new Error('Invalid Wisp packet'));
+        return;
+      }
       if (this.connected && this.connecting) {
         this.connecting = false;
         clearTimeout(this.handshake_timer);
@@ -202,7 +213,8 @@ export class ClientConnection {
     let stream = this.active_streams[packet.stream_id];
     if (packet.stream_id === 0 && this.connecting) {
       if (packet.type === packet_types.CONTINUE) {
-        if (!packet.payload.buffer_remaining || packet.payload.buffer_remaining > 65536) throw new Error('Invalid initial Wisp credit');
+        if (!packet.payload.buffer_remaining || packet.payload.buffer_remaining > 65536)
+          throw new Error('Invalid initial Wisp credit');
         this.max_buffer_size = packet.payload.buffer_remaining;
         this.connected = true;
         if (!this.info_received) {
@@ -212,7 +224,7 @@ export class ClientConnection {
 
       if (packet.type === packet_types.INFO && this.wisp_version === 2) {
         if (packet.payload.major_ver !== 2 || this.info_received) throw new Error('Invalid Wisp version');
-        let server_extensions = parse_extensions(packet.payload.extensions, this.wisp_extensions, "server");
+        let server_extensions = parse_extensions(packet.payload.extensions, this.wisp_extensions, 'server');
         for (let server_ext of server_extensions) {
           for (let client_ext of this.wisp_extensions) {
             if (server_ext.id === client_ext.id) {
@@ -233,33 +245,29 @@ export class ClientConnection {
           payload: new InfoPayload({
             major_ver: this.wisp_version,
             minor_ver: 0,
-            extensions: ext_buffer
-          })
+            extensions: ext_buffer,
+          }),
         });
         this.ws.send(info_packet.serialize().bytes);
       }
       return;
     }
 
-    if (typeof stream === "undefined") {
+    if (typeof stream === 'undefined') {
       if (packet.type === packet_types.CLOSE) return;
-      console.warn(`wisp client warning: received a ${packet_classes[packet.type].name} packet for a stream which doesn't exist`);
+      console.warn(
+        `wisp client warning: received a ${packet_classes[packet.type].name} packet for a stream which doesn't exist`
+      );
       return;
     }
 
     if (packet.type === packet_types.DATA) {
       stream.onmessage(packet.payload_bytes.bytes);
-    }
-
-    else if (packet.type === packet_types.CONTINUE) {
+    } else if (packet.type === packet_types.CONTINUE) {
       stream.continue_received(packet.payload.buffer_remaining);
-    }
-
-    else if (packet.type === packet_types.CLOSE) {
+    } else if (packet.type === packet_types.CLOSE) {
       this.close_stream(stream, packet.payload.reason);
-    }
-
-    else {
+    } else {
       console.warn(`wisp client warning: received an invalid packet of type ${packet.type}`);
     }
   }
@@ -278,15 +286,14 @@ export class ClientConnection {
     }
   }
 
-  create_stream(hostname, port, type=0x01) {
+  create_stream(hostname, port, type = 0x01) {
     if (!this.connected) throw new Error('Wisp connection is not ready');
     if (this.next_stream_id > 0xffffffff) throw new Error('Wisp stream IDs exhausted; reconnect required');
     let stream_type = type;
-    if (typeof stream_type === "string")
-      stream_type = type === "udp" ? stream_types.UDP : stream_types.TCP;
+    if (typeof stream_type === 'string') stream_type = type === 'udp' ? stream_types.UDP : stream_types.TCP;
 
     if (stream_type == stream_types.UDP && !this.udp_enabled) {
-      throw new Error("udp is not enabled for this wisp connection");
+      throw new Error('udp is not enabled for this wisp connection');
     }
 
     const stream_id = this.next_stream_id++;
@@ -300,8 +307,8 @@ export class ClientConnection {
       payload: new ConnectPayload({
         stream_type: stream_type,
         port: port,
-        hostname: hostname
-      })
+        hostname: hostname,
+      }),
     });
     this.ws.send(packet.serialize().bytes);
     return stream;
@@ -316,4 +323,3 @@ export class ClientConnection {
     stream.onclose(reason);
   }
 }
-

@@ -1,7 +1,7 @@
-import * as logging from "../logging.mjs";
-import * as filter from "./filter.mjs";
-import { AsyncQueue, AsyncWebSocket, get_conn_id } from "../websocket.mjs";
-import { NodeTCPSocket, NodeUDPSocket } from "./net.mjs";
+import * as logging from '../logging.mjs';
+import * as filter from './filter.mjs';
+import { AsyncQueue, AsyncWebSocket, get_conn_id } from '../websocket.mjs';
+import { NodeTCPSocket, NodeUDPSocket } from './net.mjs';
 import {
   WispBuffer,
   WispPacket,
@@ -11,10 +11,10 @@ import {
   DataPayload,
   InfoPayload,
   stream_types,
-  close_reasons
-} from "../packet.mjs";
-import { options } from "./options.mjs";
-import { MOTDExtension, UDPExtension, serialize_extensions, parse_extensions } from "../extensions.mjs";
+  close_reasons,
+} from '../packet.mjs';
+import { options } from './options.mjs';
+import { MOTDExtension, UDPExtension, serialize_extensions, parse_extensions } from '../extensions.mjs';
 
 export class HandshakeError extends Error {}
 
@@ -33,13 +33,16 @@ export class ServerStream {
   async setup() {
     if (this.closed) return;
     await this.socket.connect();
-    if (this.closed) { await this.socket.close(); return; }
+    if (this.closed) {
+      await this.socket.close();
+      return;
+    }
 
-    this.tcp_to_ws().catch((error) => {
+    this.tcp_to_ws().catch(error => {
       logging.warn(`(${this.conn.conn_id}) upstream receive failed (${error.code || 'transport'})`);
       this.conn.close_stream(this.stream_id, close_reasons.NetworkError).catch(() => {});
     });
-    this.ws_to_tcp().catch((error) => {
+    this.ws_to_tcp().catch(error => {
       logging.warn(`(${this.conn.conn_id}) upstream send failed (${error.code || 'transport'})`);
       this.conn.close_stream(this.stream_id, close_reasons.NetworkError).catch(() => {});
     });
@@ -57,8 +60,8 @@ export class ServerStream {
         type: DataPayload.type,
         stream_id: this.stream_id,
         payload: new DataPayload({
-          data: new WispBuffer(new Uint8Array(data))
-        })
+          data: new WispBuffer(new Uint8Array(data)),
+        }),
       });
       await this.conn.ws.send(packet);
       this.socket.resume();
@@ -82,8 +85,8 @@ export class ServerStream {
         type: ContinuePayload.type,
         stream_id: this.stream_id,
         payload: new ContinuePayload({
-          buffer_remaining: ServerStream.buffer_size - this.send_buffer.size
-        })
+          buffer_remaining: ServerStream.buffer_size - this.send_buffer.size,
+        }),
       });
       await this.conn.ws.send(packet);
     }
@@ -101,8 +104,8 @@ export class ServerStream {
       type: ClosePayload.type,
       stream_id: this.stream_id,
       payload: new ClosePayload({
-        reason: reason
-      })
+        reason: reason,
+      }),
     });
     await this.conn.ws.send(packet);
   }
@@ -114,7 +117,11 @@ export class ServerStream {
 }
 
 export class ServerConnection {
-  constructor(ws, path, {TCPSocket, UDPSocket, ping_interval, wisp_version, wisp_extensions, handshake_timeout = 10000} = {}) {
+  constructor(
+    ws,
+    path,
+    { TCPSocket, UDPSocket, ping_interval, wisp_version, wisp_extensions, handshake_timeout = 10000 } = {}
+  ) {
     this.ws = new AsyncWebSocket(ws);
     this.path = path;
     this.TCPSocket = TCPSocket || NodeTCPSocket;
@@ -138,12 +145,15 @@ export class ServerConnection {
 
   add_extensions() {
     this.wisp_extensions = [];
-    if (options.allow_udp_streams)
-      this.wisp_extensions.push(new UDPExtension({server_config: {}}));
+    if (options.allow_udp_streams) this.wisp_extensions.push(new UDPExtension({ server_config: {} }));
     if (options.wisp_motd)
-      this.wisp_extensions.push(new MOTDExtension({server_config: {
-        message: options.wisp_motd
-      }}));
+      this.wisp_extensions.push(
+        new MOTDExtension({
+          server_config: {
+            message: options.wisp_motd,
+          },
+        })
+      );
   }
 
   async setup() {
@@ -151,23 +161,28 @@ export class ServerConnection {
 
     await this.ws.connect();
     if (this.wisp_version == 2) {
-      await this.setup_wisp_v2()
+      await this.setup_wisp_v2();
     }
 
     let continue_packet = new WispPacket({
       type: ContinuePayload.type,
       stream_id: 0,
       payload: new ContinuePayload({
-        buffer_remaining: ServerStream.buffer_size
-      })
+        buffer_remaining: ServerStream.buffer_size,
+      }),
     });
     await this.ws.send(continue_packet);
 
-    if (typeof this.ws.ws.ping === "function") {
+    if (typeof this.ws.ws.ping === 'function') {
       this.pong_received = true;
-      this.ws.ws.on('pong', () => { this.pong_received = true; });
+      this.ws.ws.on('pong', () => {
+        this.pong_received = true;
+      });
       this.ping_task = setInterval(() => {
-        if (!this.pong_received) { this.ws.ws.terminate(); return; }
+        if (!this.pong_received) {
+          this.ws.ws.terminate();
+          return;
+        }
         this.pong_received = false;
         if (this.ws.ws.readyState === 1) this.ws.ws.ping();
       }, this.ping_interval * 1000);
@@ -182,18 +197,26 @@ export class ServerConnection {
       payload: new InfoPayload({
         major_ver: this.wisp_version,
         minor_ver: 0,
-        extensions: ext_buffer
-      })
+        extensions: ext_buffer,
+      }),
     });
     await this.ws.send(info_packet);
 
     let timer;
     let data;
     try {
-      data = await Promise.race([this.ws.recv(), new Promise((_, reject) => {
-        timer = setTimeout(() => { this.ws.close(1002, 'Handshake timeout'); reject(new HandshakeError('Handshake timeout')); }, this.handshake_timeout);
-      })]);
-    } finally { clearTimeout(timer); }
+      data = await Promise.race([
+        this.ws.recv(),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            this.ws.close(1002, 'Handshake timeout');
+            reject(new HandshakeError('Handshake timeout'));
+          }, this.handshake_timeout);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
     if (data == null) {
       logging.warn(`(${this.conn_id}) handshake error: ws closed before handshake complete`);
       await this.cleanup();
@@ -208,7 +231,7 @@ export class ServerConnection {
       throw new HandshakeError();
     }
 
-    let client_extensions = parse_extensions(packet.payload.extensions, this.wisp_extensions, "client");
+    let client_extensions = parse_extensions(packet.payload.extensions, this.wisp_extensions, 'client');
     for (let client_ext of client_extensions) {
       for (let server_ext of this.wisp_extensions) {
         if (server_ext.id === client_ext.id) {
@@ -226,15 +249,20 @@ export class ServerConnection {
     let socket = new SocketImpl(hostname, port);
     let stream = new ServerStream(stream_id, this, socket);
     const existing = Object.values(this.streams);
-    const overLimit = (options.stream_limit_total !== -1 && existing.length >= options.stream_limit_total) ||
-      (options.stream_limit_per_host !== -1 && existing.filter(item => item.socket.hostname === hostname).length >= options.stream_limit_per_host);
+    const overLimit =
+      (options.stream_limit_total !== -1 && existing.length >= options.stream_limit_total) ||
+      (options.stream_limit_per_host !== -1 &&
+        existing.filter(item => item.socket.hostname === hostname).length >= options.stream_limit_per_host);
     this.streams[stream_id] = stream;
 
     (async () => {
       const resolved = {};
-      let close_reason = overLimit ? close_reasons.ConnThrottled : await filter.is_stream_allowed(null, type, hostname, port, resolved);
+      let close_reason = overLimit
+        ? close_reasons.ConnThrottled
+        : await filter.is_stream_allowed(null, type, hostname, port, resolved);
       socket.resolved_ip = resolved.address;
-      if (type === stream_types.UDP && this.wisp_version === 2 && !this.client_exts[UDPExtension.id]) close_reason = close_reasons.IncompatibleExtensions;
+      if (type === stream_types.UDP && this.wisp_version === 2 && !this.client_exts[UDPExtension.id])
+        close_reason = close_reasons.IncompatibleExtensions;
       if (close_reason) {
         await this.close_stream(stream_id, close_reason, true);
         return;
@@ -242,8 +270,7 @@ export class ServerConnection {
       try {
         if (stream.closed) return;
         await stream.setup();
-      }
-      catch (error) {
+      } catch (error) {
         logging.warn(`(${this.conn_id}) upstream connection failed (${error.code || 'transport'})`);
         await this.close_stream(stream_id, close_reasons.NetworkError);
       }
@@ -272,25 +299,19 @@ export class ServerConnection {
     }
 
     if (packet.type === ConnectPayload.type) {
-      let type_info = packet.payload.stream_type === stream_types.TCP ? "TCP" : "UDP";
+      let type_info = packet.payload.stream_type === stream_types.TCP ? 'TCP' : 'UDP';
       logging.debug(`(${this.conn_id}) opening ${type_info} stream ${packet.stream_id}`);
       this.create_stream(
         packet.stream_id,
         packet.payload.stream_type,
         packet.payload.hostname.trim(),
         packet.payload.port
-      )
-    }
-
-    else if (packet.type === DataPayload.type) {
+      );
+    } else if (packet.type === DataPayload.type) {
       await stream.put_data(packet.payload.data.bytes);
-    }
-
-    else if (packet.type == ContinuePayload.type) {
+    } else if (packet.type == ContinuePayload.type) {
       logging.warn(`(${this.conn_id}) client sent a CONTINUE packet, this should never be possible`);
-    }
-
-    else if (packet.type == ClosePayload.type) {
+    } else if (packet.type == ClosePayload.type) {
       await this.close_stream(packet.stream_id, packet.payload.reason);
     }
   }
@@ -302,15 +323,14 @@ export class ServerConnection {
       if (data == null) {
         break;
       }
-      if (typeof data === "string") {
+      if (typeof data === 'string') {
         logging.warn(`(${this.conn_id}) routing a packet failed - unexpected ws text frame`);
         continue;
       }
 
       try {
         await this.route_packet(new WispBuffer(new Uint8Array(data)));
-      }
-      catch (error) {
+      } catch (error) {
         logging.warn(`(${this.conn_id}) invalid Wisp packet`);
         this.ws.close(1002, 'Invalid Wisp packet');
         break;

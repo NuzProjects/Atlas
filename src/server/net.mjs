@@ -1,9 +1,9 @@
-import * as logging from "../logging.mjs";
-import { AsyncQueue } from "../websocket.mjs";
-import { options } from "./options.mjs";
-import { net, dgram, dns } from "../compat.mjs";
+import * as logging from '../logging.mjs';
+import { AsyncQueue } from '../websocket.mjs';
+import { options } from './options.mjs';
+import { net, dgram, dns } from '../compat.mjs';
 
-export const is_node = (typeof process !== "undefined");
+export const is_node = typeof process !== 'undefined';
 
 const dns_cache = new Map();
 const dns_pending = new Map();
@@ -12,7 +12,7 @@ let resolver = null;
 
 export function assert_on_node() {
   if (!is_node) {
-    throw new Error("not running on node.js");
+    throw new Error('not running on node.js');
   }
 }
 
@@ -25,19 +25,16 @@ function resolve6(hostname) {
 async function resolve_with_fallback(resolve_first, resolve_after, hostname) {
   try {
     return (await resolve_first(hostname))[0];
-  }
-  catch {
+  } catch {
     return (await resolve_after(hostname))[0];
   }
 }
 
 async function perform_lookup(hostname) {
-  if (options.dns_method === "lookup") {
-    let result = await dns.lookup(hostname, {order: options.dns_result_order});
+  if (options.dns_method === 'lookup') {
+    let result = await dns.lookup(hostname, { order: options.dns_result_order });
     return result.address;
-  }
-
-  else if (options.dns_method === "resolve") {
+  } else if (options.dns_method === 'resolve') {
     if (!resolver) resolver = new dns.Resolver();
 
     if (options.dns_servers !== dns_servers) {
@@ -45,15 +42,14 @@ async function perform_lookup(hostname) {
       dns_servers = options.dns_servers;
     }
 
-    if (options.dns_result_order === "verbatim" || options.dns_result_order === "ipv6first")
+    if (options.dns_result_order === 'verbatim' || options.dns_result_order === 'ipv6first')
       return await resolve_with_fallback(resolve6, resolve4, hostname);
-    else if (options.dns_result_order === "ipv4first")
-      return await resolve_with_fallback(resolve4, resolve6, hostname);
+    else if (options.dns_result_order === 'ipv4first') return await resolve_with_fallback(resolve4, resolve6, hostname);
     else
-      throw new Error("Invalid result order. options.dns_result_order must be either 'ipv6first', 'ipv4first', or 'verbatim'.");
-  }
-
-  else if (typeof options.dns_method === "function") {
+      throw new Error(
+        "Invalid result order. options.dns_result_order must be either 'ipv6first', 'ipv4first', or 'verbatim'."
+      );
+  } else if (typeof options.dns_method === 'function') {
     return await options.dns_method(hostname);
   }
 
@@ -73,8 +69,7 @@ export async function lookup_ip(hostname) {
   hostname = hostname.toLowerCase();
   let cache_entry = dns_cache.get(hostname);
   if (cache_entry && Date.now() - cache_entry.time < options.dns_ttl * 1000) {
-    if (cache_entry.error)
-      throw cache_entry.error
+    if (cache_entry.error) throw cache_entry.error;
     return cache_entry.address;
   }
 
@@ -82,15 +77,21 @@ export async function lookup_ip(hostname) {
   const pending = (async () => {
     let timer;
     try {
-      const address = await Promise.race([perform_lookup(hostname), new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error('DNS lookup timeout')), 10000);
-      })]);
+      const address = await Promise.race([
+        perform_lookup(hostname),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('DNS lookup timeout')), 10000);
+        }),
+      ]);
       if (!net.isIP(address)) throw new Error('DNS returned an invalid address');
       dns_cache.delete(hostname);
       if (dns_cache.size >= 1024) dns_cache.delete(dns_cache.keys().next().value);
       dns_cache.set(hostname, { time: Date.now(), address });
       return address;
-    } finally { clearTimeout(timer); dns_pending.delete(hostname); }
+    } finally {
+      clearTimeout(timer);
+      dns_pending.delete(hostname);
+    }
   })();
   dns_pending.set(hostname, pending);
   return pending;
@@ -111,23 +112,33 @@ export class NodeTCPSocket {
   }
 
   async connect() {
-    let ip = this.resolved_ip || await lookup_ip(this.hostname);
+    let ip = this.resolved_ip || (await lookup_ip(this.hostname));
     if (this.closed) throw new Error('TCP stream was closed before connecting');
     await new Promise((resolve, reject) => {
-      const socket = this.socket = new net.Socket();
+      const socket = (this.socket = new net.Socket());
       const timer = setTimeout(() => socket.destroy(new Error('TCP connect timeout')), 15000);
       socket.setNoDelay(true);
-      socket.on("connect", () => {
-        if (this.closed) { socket.destroy(); reject(new Error('TCP stream was closed while connecting')); return; }
+      socket.on('connect', () => {
+        if (this.closed) {
+          socket.destroy();
+          reject(new Error('TCP stream was closed while connecting'));
+          return;
+        }
         this.connected = true;
         clearTimeout(timer);
         resolve();
       });
-      socket.on("data", (data) => {
-        if (!this.data_queue.put_now(data)) { socket.destroy(new Error('TCP receive queue exceeded')); return; }
-        if (this.data_queue.size >= this.recv_buffer_size / 2) { socket.pause(); this.paused = true; }
+      socket.on('data', data => {
+        if (!this.data_queue.put_now(data)) {
+          socket.destroy(new Error('TCP receive queue exceeded'));
+          return;
+        }
+        if (this.data_queue.size >= this.recv_buffer_size / 2) {
+          socket.pause();
+          this.paused = true;
+        }
       });
-      socket.on("close", () => {
+      socket.on('close', () => {
         if (!this.connected) reject(new Error('TCP connection closed before connecting'));
         this.connected = false;
         clearTimeout(timer);
@@ -135,16 +146,16 @@ export class NodeTCPSocket {
         this.closed = true;
         if (this.socket === socket) this.socket = null;
       });
-      socket.on("error", (error) => {
+      socket.on('error', error => {
         reject(error);
         clearTimeout(timer);
       });
-      socket.on("end", () => {
+      socket.on('end', () => {
         socket.destroy();
       });
       socket.connect({
         host: ip,
-        port: this.port
+        port: this.port,
       });
     });
   }
@@ -160,7 +171,7 @@ export class NodeTCPSocket {
     const socket = this.socket;
     if (this.closed || !socket || socket.destroyed || socket.writableEnded) return;
     await new Promise((resolve, reject) => {
-      socket.write(data, error => error ? reject(error) : resolve());
+      socket.write(data, error => (error ? reject(error) : resolve()));
     });
   }
 
@@ -201,26 +212,30 @@ export class NodeUDPSocket {
   }
 
   async connect() {
-    let ip = this.resolved_ip || await lookup_ip(this.hostname);
+    let ip = this.resolved_ip || (await lookup_ip(this.hostname));
     if (this.closed) throw new Error('UDP stream was closed before connecting');
     let ip_level = net.isIP(ip);
     await new Promise((resolve, reject) => {
-      const socket = this.socket = dgram.createSocket(ip_level === 6 ? "udp6" : "udp4");
-      socket.on("connect", () => {
-        if (this.closed) { reject(new Error('UDP stream was closed while connecting')); return; }
+      const socket = (this.socket = dgram.createSocket(ip_level === 6 ? 'udp6' : 'udp4'));
+      socket.on('connect', () => {
+        if (this.closed) {
+          reject(new Error('UDP stream was closed while connecting'));
+          return;
+        }
         this.connected = true;
         resolve();
       });
-      socket.on("message", (data) => {
+      socket.on('message', data => {
         if (!this.data_queue.put_now(data)) this.dropped_packets++;
       });
-      socket.on("error", error => {
+      socket.on('error', error => {
         reject(error);
         this.close();
       });
       socket.on('close', () => {
         if (!this.connected) reject(new Error('UDP socket closed before connecting'));
-        this.connected = false; this.closed = true;
+        this.connected = false;
+        this.closed = true;
         this.data_queue.close({ drain: true });
         if (this.socket === socket) this.socket = null;
       });
@@ -234,14 +249,16 @@ export class NodeUDPSocket {
 
   async send(data) {
     if (this.closed || !this.connected || !this.socket) throw new Error('UDP stream is closed');
-    await new Promise((resolve, reject) => this.socket.send(data, error => error ? reject(error) : resolve()));
+    await new Promise((resolve, reject) => this.socket.send(data, error => (error ? reject(error) : resolve())));
   }
 
   async close() {
     this.closed = true;
     this.connected = false;
     this.data_queue.close();
-    try { this.socket?.close(); } catch {}
+    try {
+      this.socket?.close();
+    } catch {}
     this.socket = null;
   }
 

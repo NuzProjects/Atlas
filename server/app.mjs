@@ -1,49 +1,61 @@
-import http from "node:http";
-import https from "node:https";
-import tls from "node:tls";
-import path from "node:path";
-import { promises as fs } from "node:fs";
-import {createWispDuplex} from './proxy-wisp.mjs';
-import {createWispAgent} from './proxy-agent.mjs';
+import http from 'node:http';
+import https from 'node:https';
+import tls from 'node:tls';
+import path from 'node:path';
+import { promises as fs } from 'node:fs';
+import { createWispDuplex } from './proxy-wisp.mjs';
+import { createWispAgent } from './proxy-agent.mjs';
 import { pipeline } from 'node:stream/promises';
-import { fileURLToPath } from "node:url";
-import { createHash } from "node:crypto";
-import { createFaviconCache } from "./favicon-cache.mjs";
-import { deploymentConfig, isPublicAtlasFile } from "./deployment-config.mjs";
-import {decodeResponse} from './proxy-encoding.mjs';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { createFaviconCache } from './favicon-cache.mjs';
+import { deploymentConfig, isPublicAtlasFile } from './deployment-config.mjs';
+import { decodeResponse } from './proxy-encoding.mjs';
 import { rewriteLocations, rewriteCss } from './proxy-compat.mjs';
-import {installDocumentAddress} from './proxy-document.mjs';
-import {isAdOrTracker, stripTrackerTags} from './proxy-trackers.mjs';
+import { installDocumentAddress } from './proxy-document.mjs';
+import { isAdOrTracker, stripTrackerTags } from './proxy-trackers.mjs';
 import WebSocket, { WebSocketServer } from 'ws';
 import { withAtlasFetchSlot } from './proxy-limits.mjs';
-import { contentOrigin, contentUpstreamOrigin, isContentHost, escapeHtml, upstreamHeaders, responseHeaders } from './proxy-security.mjs';
-import {createUrlCodec,loadUrlKey} from './proxy-url.mjs';
-import {AsyncLocalStorage} from 'node:async_hooks';
-import {buildInfo} from './proxy-build.mjs';
-import {createProxyEngines} from './proxy-engines.mjs';
-import {createDefaultRelayGateway} from './default-relay.mjs';
+import {
+  contentOrigin,
+  contentUpstreamOrigin,
+  isContentHost,
+  escapeHtml,
+  upstreamHeaders,
+  responseHeaders,
+} from './proxy-security.mjs';
+import { createUrlCodec, loadUrlKey } from './proxy-url.mjs';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { buildInfo } from './proxy-build.mjs';
+import { createProxyEngines } from './proxy-engines.mjs';
+import { createDefaultRelayGateway } from './default-relay.mjs';
 
-import { server as wisp } from "../src/index.mjs";
-import * as logging from "../src/logging.mjs";
-import { client as wispClient } from "../src/entrypoints/client.mjs";
+import { server as wisp } from '../src/index.mjs';
+import * as logging from '../src/logging.mjs';
+import { client as wispClient } from '../src/entrypoints/client.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(path.dirname(__filename));
 const atlasBuild = buildInfo(__dirname);
-const cachedFavicon = createFaviconCache({ directory: path.join(__dirname, '.cache', 'favicons'), fallbackPath: path.join(__dirname, 'assets', 'atlas.png') });
+const cachedFavicon = createFaviconCache({
+  directory: path.join(__dirname, '.cache', 'favicons'),
+  fallbackPath: path.join(__dirname, 'assets', 'atlas.png'),
+});
 
-const contentFilterScript = await fs.readFile(path.join(__dirname,'public','atlas-content-filter.js'),'utf8');
+const contentFilterScript = await fs.readFile(path.join(__dirname, 'public', 'atlas-content-filter.js'), 'utf8');
 const deployment = deploymentConfig();
 const defaultRelayUpgrade = createDefaultRelayGateway(deployment.localWisp);
 const requestContext = new AsyncLocalStorage();
-Object.defineProperty(deployment,'requestOrigin',{get:()=>requestContext.getStore()?.origin || deployment.publicOrigin});
-const urlCodec=createUrlCodec(await loadUrlKey(path.join(__dirname,'.cache','proxy-url.key')));
-const proxyEngines=await createProxyEngines(__dirname,urlCodec);
-deployment.decodeProxyTarget=token=>urlCodec.open(token).url;
+Object.defineProperty(deployment, 'requestOrigin', {
+  get: () => requestContext.getStore()?.origin || deployment.publicOrigin,
+});
+const urlCodec = createUrlCodec(await loadUrlKey(path.join(__dirname, '.cache', 'proxy-url.key')));
+const proxyEngines = await createProxyEngines(__dirname, urlCodec);
+deployment.decodeProxyTarget = token => urlCodec.open(token).url;
 const PORT = deployment.port;
 
 logging.set_level(logging.WARN);
-wisp.options.dns_result_order = "ipv4first";
+wisp.options.dns_result_order = 'ipv4first';
 wisp.options.allow_private_ips = deployment.allowPrivate;
 wisp.options.allow_loopback_ips = deployment.allowPrivate;
 if (deployment.production) {
@@ -52,21 +64,40 @@ if (deployment.production) {
   wisp.options.port_blacklist = [25, 465, 587];
 }
 
-process.on('uncaughtException', error => { console.error('Fatal application exception; restarting',error?.code || error?.name || 'unknown',error?.stack?.split('\n').slice(1,4).join('\n') || ''); process.exit(1); });
-process.on('unhandledRejection', error => { console.error('Unhandled application rejection; restarting', error?.code || error?.name || 'unknown', error?.stack?.split('\n').slice(1,4).join('\n') || ''); process.exit(1); });
+process.on('uncaughtException', error => {
+  console.error(
+    'Fatal application exception; restarting',
+    error?.code || error?.name || 'unknown',
+    error?.stack?.split('\n').slice(1, 4).join('\n') || ''
+  );
+  process.exit(1);
+});
+process.on('unhandledRejection', error => {
+  console.error(
+    'Unhandled application rejection; restarting',
+    error?.code || error?.name || 'unknown',
+    error?.stack?.split('\n').slice(1, 4).join('\n') || ''
+  );
+  process.exit(1);
+});
 
 const wispConnections = new Map();
 const wispConnecting = new Map();
 const wispAgents = new Map();
-function getWispAgent(relay,secure,lane=0) {
-  const normalized=deployment.normalizeRelay(relay),key=JSON.stringify([normalized,secure,lane]);
-  if(!wispAgents.has(key))wispAgents.set(key,createWispAgent(()=>getWispConnection(normalized,lane),{secure}));
+function getWispAgent(relay, secure, lane = 0) {
+  const normalized = deployment.normalizeRelay(relay),
+    key = JSON.stringify([normalized, secure, lane]);
+  if (!wispAgents.has(key))
+    wispAgents.set(
+      key,
+      createWispAgent(() => getWispConnection(normalized, lane), { secure })
+    );
   return wispAgents.get(key);
 }
 
-function getWispConnection(wispUrl,lane=0) {
+function getWispConnection(wispUrl, lane = 0) {
   const normalized = deployment.normalizeRelay(wispUrl);
-  const connectionKey=JSON.stringify([normalized,lane]);
+  const connectionKey = JSON.stringify([normalized, lane]);
 
   const existing = wispConnections.get(connectionKey);
   if (existing && existing.connected) {
@@ -77,11 +108,15 @@ function getWispConnection(wispUrl,lane=0) {
   const opening = new Promise((resolve, reject) => {
     try {
       const conn = new wispClient.ClientConnection(normalized, { wisp_version: 2 });
-      wispConnections.set(connectionKey,conn);
+      wispConnections.set(connectionKey, conn);
       const forget = () => {
         if (wispConnections.get(connectionKey) !== conn) return;
         wispConnections.delete(connectionKey);
-        for(const secure of [true,false]){const key=JSON.stringify([normalized,secure,lane]);wispAgents.get(key)?.destroy();wispAgents.delete(key);}
+        for (const secure of [true, false]) {
+          const key = JSON.stringify([normalized, secure, lane]);
+          wispAgents.get(key)?.destroy();
+          wispAgents.delete(key);
+        }
       };
       const timer = setTimeout(() => {
         forget();
@@ -95,7 +130,7 @@ function getWispConnection(wispUrl,lane=0) {
         resolve(conn);
       };
 
-      conn.onerror = (err) => {
+      conn.onerror = err => {
         clearTimeout(timer);
         forget();
         conn.close();
@@ -112,24 +147,28 @@ function getWispConnection(wispUrl,lane=0) {
     }
   });
   wispConnecting.set(connectionKey, opening);
-  const finish = () => { if (wispConnecting.get(connectionKey) === opening) wispConnecting.delete(connectionKey); };
+  const finish = () => {
+    if (wispConnecting.get(connectionKey) === opening) wispConnecting.delete(connectionKey);
+  };
   opening.then(finish, finish);
   return opening;
 }
 
 async function fetchOverWisp(wispUrl, targetUrl, options = {}, redirectCount = 0) {
-  return withAtlasFetchSlot(new URL(targetUrl).hostname, (releaseSlot,lane) => fetchOverWispRequest(wispUrl,targetUrl,{...options,releaseSlot,lane},redirectCount));
+  return withAtlasFetchSlot(new URL(targetUrl).hostname, (releaseSlot, lane) =>
+    fetchOverWispRequest(wispUrl, targetUrl, { ...options, releaseSlot, lane }, redirectCount)
+  );
 }
 async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCount = 0) {
   if (redirectCount > 5) {
-    throw new Error("Too many redirects");
+    throw new Error('Too many redirects');
   }
 
   const parsed = new URL(targetUrl);
-  const isHttps = parsed.protocol === "https:";
-  const port = parsed.port ? parseInt(parsed.port, 10) : (isHttps ? 443 : 80);
+  const isHttps = parsed.protocol === 'https:';
+  const port = parsed.port ? parseInt(parsed.port, 10) : isHttps ? 443 : 80;
   const host = parsed.hostname;
-  const agent = getWispAgent(wispUrl,isHttps,options.lane);
+  const agent = getWispAgent(wispUrl, isHttps, options.lane);
 
   return new Promise((resolve, reject) => {
     let req;
@@ -140,87 +179,117 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
     }, timeoutMs);
 
     const onConnected = () => {
-      const pathWithQuery = parsed.pathname + (parsed.search || "");
+      const pathWithQuery = parsed.pathname + (parsed.search || '');
 
       const headers = {
-        "Host": parsed.host,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        ...(options.headers || {})
+        Host: parsed.host,
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        ...(options.headers || {}),
       };
 
       if (options.body && typeof options.body.pipe !== 'function') {
-        headers["Content-Length"] = Buffer.byteLength(options.body);
+        headers['Content-Length'] = Buffer.byteLength(options.body);
       }
 
-      req = http.request({
-        host: host,
-        port: port,
-        path: pathWithQuery,
-        method: options.method || "GET",
-        headers: headers,
-        maxHeaderSize: 65536,
-        agent
-      }, async (res) => {
-        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && !options.noRedirect) {
-          clearTimeout(timer);
+      req = http.request(
+        {
+          host: host,
+          port: port,
+          path: pathWithQuery,
+          method: options.method || 'GET',
+          headers: headers,
+          maxHeaderSize: 65536,
+          agent,
+        },
+        async res => {
+          if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && !options.noRedirect) {
+            clearTimeout(timer);
+            try {
+              const redirectTarget = new URL(res.headers.location, targetUrl).href;
+              res.resume();
+              const redirectedOptions = { ...options, headers: { ...options.headers } };
+              options.releaseSlot?.();
+              delete redirectedOptions.releaseSlot;
+              if (new URL(redirectTarget).origin !== parsed.origin) {
+                for (const name of Object.keys(redirectedOptions.headers))
+                  if (/^(authorization|cookie|origin|referer)$/i.test(name)) delete redirectedOptions.headers[name];
+              }
+              if (res.statusCode === 303 || ([301, 302].includes(res.statusCode) && options.method === 'POST')) {
+                redirectedOptions.method = 'GET';
+                delete redirectedOptions.body;
+                delete redirectedOptions.headers['Content-Type'];
+              }
+              const redirectedRes = await fetchOverWisp(wispUrl, redirectTarget, redirectedOptions, redirectCount + 1);
+              resolve(redirectedRes);
+              return;
+            } catch (e) {
+              reject(e);
+              return;
+            }
+          }
+
+          let responseBody;
           try {
-            const redirectTarget = new URL(res.headers.location, targetUrl).href;
-            res.resume();
-            const redirectedOptions = { ...options, headers: { ...options.headers } };
-            options.releaseSlot?.(); delete redirectedOptions.releaseSlot;
-            if (new URL(redirectTarget).origin !== parsed.origin) {
-              for (const name of Object.keys(redirectedOptions.headers)) if (/^(authorization|cookie|origin|referer)$/i.test(name)) delete redirectedOptions.headers[name];
-            }
-            if (res.statusCode === 303 || ([301, 302].includes(res.statusCode) && options.method === 'POST')) {
-              redirectedOptions.method = 'GET'; delete redirectedOptions.body;
-              delete redirectedOptions.headers['Content-Type'];
-            }
-            const redirectedRes = await fetchOverWisp(wispUrl, redirectTarget, redirectedOptions, redirectCount + 1);
-            resolve(redirectedRes);
-            return;
-          } catch (e) {
-            reject(e);
+            responseBody = decodeResponse(res);
+          } catch (error) {
+            clearTimeout(timer);
+            req.destroy(error);
+            reject(error);
             return;
           }
-        }
-
-        let responseBody;
-        try { responseBody=decodeResponse(res); }
-        catch(error) {clearTimeout(timer);req.destroy(error);reject(error);return;}
-        if (options.responseSink && !res.headers.location && !/javascript|ecmascript|text\/css|text\/html/i.test(res.headers['content-type'] || '')) {
-          clearTimeout(timer);
-          try {
-            options.responseSink.writeHead(res.statusCode, options.buildResponseHeaders({headers:res.headers,statusCode:res.statusCode}));
-            await pipeline(responseBody, options.responseSink);
-            resolve({streamed:true});
-          } catch (error) { req.destroy(); reject(error); }
-          return;
-        }
-        const chunks = [];
-        let bytes = 0;
-        responseBody.on("data", c => {
-          bytes += c.length;
-          if (bytes > 32 * 1024 * 1024) { req.destroy(new Error('Upstream response exceeds 32 MiB limit')); return; }
-          chunks.push(c);
-        });
-        res.on('aborted', () => req.destroy(new Error('Upstream response was interrupted')));
-        responseBody.on('error', error => { clearTimeout(timer); req.destroy(); reject(error); });
-        responseBody.on("end", () => {
-          clearTimeout(timer);
-          const rawBuffer = Buffer.concat(chunks);
-          resolve({
-            statusCode: res.statusCode,
-            headers: res.headers,
-            buffer: rawBuffer,
-            targetUrl: targetUrl
+          if (
+            options.responseSink &&
+            !res.headers.location &&
+            !/javascript|ecmascript|text\/css|text\/html/i.test(res.headers['content-type'] || '')
+          ) {
+            clearTimeout(timer);
+            try {
+              options.responseSink.writeHead(
+                res.statusCode,
+                options.buildResponseHeaders({ headers: res.headers, statusCode: res.statusCode })
+              );
+              await pipeline(responseBody, options.responseSink);
+              resolve({ streamed: true });
+            } catch (error) {
+              req.destroy();
+              reject(error);
+            }
+            return;
+          }
+          const chunks = [];
+          let bytes = 0;
+          responseBody.on('data', c => {
+            bytes += c.length;
+            if (bytes > 32 * 1024 * 1024) {
+              req.destroy(new Error('Upstream response exceeds 32 MiB limit'));
+              return;
+            }
+            chunks.push(c);
           });
-        });
-      });
+          res.on('aborted', () => req.destroy(new Error('Upstream response was interrupted')));
+          responseBody.on('error', error => {
+            clearTimeout(timer);
+            req.destroy();
+            reject(error);
+          });
+          responseBody.on('end', () => {
+            clearTimeout(timer);
+            const rawBuffer = Buffer.concat(chunks);
+            resolve({
+              statusCode: res.statusCode,
+              headers: res.headers,
+              buffer: rawBuffer,
+              targetUrl: targetUrl,
+            });
+          });
+        }
+      );
 
-      req.on("error", (err) => {
+      req.on('error', err => {
         clearTimeout(timer);
         req.destroy();
         reject(err);
@@ -246,12 +315,20 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
   });
 }
 
-function proxyAddress(target,wisp,isNavigation=false,blockAds=true,blockFingerprint=true,descriptor) {
-  const kind=isNavigation?'document':'resource';
-  const token=urlCodec.seal({url:target,wisp,kind,blockAds,blockFingerprint},descriptor);
-  return contentOrigin(target,deployment)+(isNavigation?'/view':'/resource')+'?token='+token;
+function proxyAddress(target, wisp, isNavigation = false, blockAds = true, blockFingerprint = true, descriptor) {
+  const kind = isNavigation ? 'document' : 'resource';
+  const token = urlCodec.seal({ url: target, wisp, kind, blockAds, blockFingerprint }, descriptor);
+  return contentOrigin(target, deployment) + (isNavigation ? '/view' : '/resource') + '?token=' + token;
 }
-function resolveToProxy(rawUrl, targetBaseUrl, wispEndpoint, isNavigation = false, blockAds = true, blockFingerprint = true, descriptor) {
+function resolveToProxy(
+  rawUrl,
+  targetBaseUrl,
+  wispEndpoint,
+  isNavigation = false,
+  blockAds = true,
+  blockFingerprint = true,
+  descriptor
+) {
   if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
   const trimmed = rawUrl.trim();
   if (
@@ -264,13 +341,13 @@ function resolveToProxy(rawUrl, targetBaseUrl, wispEndpoint, isNavigation = fals
   ) {
     return rawUrl;
   }
-  if (['/view?','/resource?','/proxy?','/proxy-raw?'].some(prefix=>trimmed.startsWith(prefix))) {
+  if (['/view?', '/resource?', '/proxy?', '/proxy-raw?'].some(prefix => trimmed.startsWith(prefix))) {
     return rawUrl;
   }
   try {
     const resolved = new URL(trimmed, targetBaseUrl).href;
     if (resolved.startsWith('http://') || resolved.startsWith('https://')) {
-      return proxyAddress(resolved,wispEndpoint,isNavigation,blockAds,blockFingerprint,descriptor);
+      return proxyAddress(resolved, wispEndpoint, isNavigation, blockAds, blockFingerprint, descriptor);
     }
   } catch {}
   return rawUrl;
@@ -283,47 +360,54 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   function block(){
     if(blocked)return;blocked=true;
     document.documentElement.style.visibility='hidden';window.stop();
-    window.parent.postMessage({type:'__atlas_content_blocked',url:${JSON.stringify(targetUrl).replace(/</g,'\\u003c')}},'*');
+    window.parent.postMessage({type:'__atlas_content_blocked',url:${JSON.stringify(targetUrl).replace(/</g, '\\u003c')}},'*');
   }
   window.addEventListener('message',function(event){
     if(event.data?.type==='__atlas_content_blocked' && Array.from(document.querySelectorAll('iframe')).some(function(frame){return frame.contentWindow===event.source && frame.getClientRects().length && getComputedStyle(frame).visibility!=='hidden';}))block();
   });
   AtlasContentFilter.observeDocument(document,block);
 })();</script>`;
-  const sourceHead = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html)?.[1] || html.slice(0,131072);
+  const sourceHead = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html)?.[1] || html.slice(0, 131072);
   const metadataMarkup = (sourceHead.match(/<title\b[^>]*>[\s\S]*?<\/title>|<(?:link|base)\b[^>]*>/gi) || []).join('');
   const baseMarkup = sourceHead.match(/<base\b[^>]*>/i)?.[0] || '';
   const metadataBootstrap = `<script id="__atlas_initial_metadata">(function(){try{
-    document.documentElement.setAttribute('data-atlas-url',${JSON.stringify(targetUrl).replace(/</g,'\\u003c')});
+    document.documentElement.setAttribute('data-atlas-url',${JSON.stringify(targetUrl).replace(/</g, '\\u003c')});
     var readySent=false;
     function reportReady(){
       if(readySent || document.readyState==='loading')return;
       readySent=true;
-      window.parent.postMessage({type:'__network_document_ready',url:${JSON.stringify(targetUrl).replace(/</g,'\\u003c')}},${JSON.stringify((deployment.proxyOriginTemplate ? deployment.publicOrigin : deployment.requestOrigin) || '').replace(/</g,'\\u003c')});
+      window.parent.postMessage({type:'__network_document_ready',url:${JSON.stringify(targetUrl).replace(/</g, '\\u003c')}},${JSON.stringify((deployment.proxyOriginTemplate ? deployment.publicOrigin : deployment.requestOrigin) || '').replace(/</g, '\\u003c')});
       document.removeEventListener('readystatechange',reportReady);
     }
     document.addEventListener('readystatechange',reportReady);reportReady();
-    var template=document.createElement('template');template.innerHTML=${JSON.stringify(metadataMarkup).replace(/</g,'\\u003c')};
+    var template=document.createElement('template');template.innerHTML=${JSON.stringify(metadataMarkup).replace(/</g, '\\u003c')};
     var title=template.content.querySelector('title')?.textContent.trim();
-    var base=new URL(template.content.querySelector('base[href]')?.getAttribute('href') || '',${JSON.stringify(targetUrl).replace(/</g,'\\u003c')});
+    var base=new URL(template.content.querySelector('base[href]')?.getAttribute('href') || '',${JSON.stringify(targetUrl).replace(/</g, '\\u003c')});
     var icons=Array.from(template.content.querySelectorAll('link[rel~="icon" i]')).filter(function(icon){return !icon.media || matchMedia(icon.media).matches;});
     icons.sort(function(a,b){function score(icon){return icon.sizes?.value==='any'||/svg/i.test(icon.type)?100:/(?:^| )32x32(?: |$)/.test(icon.sizes?.value||'')?90:80;}return score(b)-score(a);});
-    window.parent.postMessage({type:'__network_metadata',url:${JSON.stringify(targetUrl).replace(/</g,'\\u003c')},title:title,iconDeclared:!!icons.length,icon:new URL(icons[0]?.getAttribute('href') || '/favicon.ico',base).href},${JSON.stringify((deployment.proxyOriginTemplate ? deployment.publicOrigin : deployment.requestOrigin) || '').replace(/</g,'\\u003c')});
+    window.parent.postMessage({type:'__network_metadata',url:${JSON.stringify(targetUrl).replace(/</g, '\\u003c')},title:title,iconDeclared:!!icons.length,icon:new URL(icons[0]?.getAttribute('href') || '/favicon.ico',base).href},${JSON.stringify((deployment.proxyOriginTemplate ? deployment.publicOrigin : deployment.requestOrigin) || '').replace(/</g, '\\u003c')});
   }catch(_){}})();</script>`;
-  const proxyDescriptor=urlCodec.issue();
-  const proxyAddresses=new Map();
-  const rewriteUrl=(raw,base,relay,navigation=false,ads=true,fingerprint=true)=>{
-    let key;try{key=JSON.stringify([new URL(raw,base).href,navigation,relay,ads,fingerprint]);}catch{return raw;}
-    if(proxyAddresses.has(key))return proxyAddresses.get(key);
-    const address=resolveToProxy(raw,base,relay,navigation,ads,fingerprint,proxyDescriptor);
-    if(proxyAddresses.size<2048)proxyAddresses.set(key,address);
+  const proxyDescriptor = urlCodec.issue();
+  const proxyAddresses = new Map();
+  const rewriteUrl = (raw, base, relay, navigation = false, ads = true, fingerprint = true) => {
+    let key;
+    try {
+      key = JSON.stringify([new URL(raw, base).href, navigation, relay, ads, fingerprint]);
+    } catch {
+      return raw;
+    }
+    if (proxyAddresses.has(key)) return proxyAddresses.get(key);
+    const address = resolveToProxy(raw, base, relay, navigation, ads, fingerprint, proxyDescriptor);
+    if (proxyAddresses.size < 2048) proxyAddresses.set(key, address);
     return address;
   };
   const darkStyle = `
 <style id="__network_proxy_dark_patch">
   a[data-atlas-href] { cursor: pointer; }
   :where(a[data-atlas-href]) { color: LinkText; text-decoration: underline; }
-  ${blockAds ? `
+  ${
+    blockAds
+      ? `
 
   .ad, .ads, .adsbygoogle, .ad-banner, .advertisement, [id^="google_ads_iframe"], [id^="ad-banner"],
   [class*="sponsored"], [id*="sponsored"], .taboola, .outbrain, iframe[src*="doubleclick"],
@@ -338,7 +422,9 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
     opacity: 0 !important;
     pointer-events: none !important;
   }
-  ` : ''}
+  `
+      : ''
+  }
 </style>
 `;
   let interceptScript = `
@@ -347,7 +433,7 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   var targetUrl = ${JSON.stringify(targetUrl).replace(/</g, '\\u003c')};
   var documentTargetUrl = targetUrl;
   var atlasBaseTemplate = document.createElement('template');
-  atlasBaseTemplate.innerHTML = ${JSON.stringify(baseMarkup).replace(/</g,'\\u003c')};
+  atlasBaseTemplate.innerHTML = ${JSON.stringify(baseMarkup).replace(/</g, '\\u003c')};
   (${installDocumentAddress.toString()})(document, function() { return targetUrl; }, atlasBaseTemplate.content.querySelector('base[href]')?.getAttribute('href'));
   var documentProxyToken = new URL(location.href).searchParams.get('token');
   var wispEndpoint = ${JSON.stringify(wispUrl).replace(/</g, '\\u003c')};
@@ -930,8 +1016,18 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   });
 
   html = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, body) => {
-    if (/\bsrc\s*=/.test(attrs) || /\btype\s*=\s*["'](?:application\/ld\+json|application\/json|importmap)/i.test(attrs)) return match;
-    return '<script' + attrs + '>' + rewriteLocations(body, url=>rewriteUrl(url,targetUrl,wispUrl,false,blockAds,blockFingerprint),targetUrl) + '</script>';
+    if (
+      /\bsrc\s*=/.test(attrs) ||
+      /\btype\s*=\s*["'](?:application\/ld\+json|application\/json|importmap)/i.test(attrs)
+    )
+      return match;
+    return (
+      '<script' +
+      attrs +
+      '>' +
+      rewriteLocations(body, url => rewriteUrl(url, targetUrl, wispUrl, false, blockAds, blockFingerprint), targetUrl) +
+      '</script>'
+    );
   });
 
   html = html.replace(/<script\b([^>]+)>/gi, (tagMatch, attrs) => {
@@ -946,15 +1042,18 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
       return `src=${quote}${rewriteUrl(url, targetUrl, wispUrl, false, blockAds, blockFingerprint)}${quote}`;
     });
     newAttrs = newAttrs.replace(/\bsrcset=(["'])([^"']+)\1/i, (m, quote, srcsetVal) => {
-      const rewritten = srcsetVal.split(',').map(part => {
-        const trimmed = part.trim();
-        if (!trimmed) return part;
-        const parts = trimmed.split(/\s+/);
-        const url = parts[0];
-        const descriptor = parts.slice(1).join(' ');
-        const proxiedUrl = rewriteUrl(url, targetUrl, wispUrl, false, blockAds, blockFingerprint);
-        return descriptor ? `${proxiedUrl} ${descriptor}` : proxiedUrl;
-      }).join(', ');
+      const rewritten = srcsetVal
+        .split(',')
+        .map(part => {
+          const trimmed = part.trim();
+          if (!trimmed) return part;
+          const parts = trimmed.split(/\s+/);
+          const url = parts[0];
+          const descriptor = parts.slice(1).join(' ');
+          const proxiedUrl = rewriteUrl(url, targetUrl, wispUrl, false, blockAds, blockFingerprint);
+          return descriptor ? `${proxiedUrl} ${descriptor}` : proxiedUrl;
+        })
+        .join(', ');
       return `srcset=${quote}${rewritten}${quote}`;
     });
     return `<${tagName}${newAttrs}>`;
@@ -989,110 +1088,178 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
     return `<form${newAttrs}>`;
   });
 
-  const isolationRuntime = '<script src="/atlas-origin.js"></script><script src="/atlas-url-crypto.js"></script><script src="/atlas-page-storage.js"></script>';
+  const isolationRuntime =
+    '<script src="/atlas-origin.js"></script><script src="/atlas-url-crypto.js"></script><script src="/atlas-page-storage.js"></script>';
 
-  interceptScript=interceptScript.replace('__ATLAS_PROXY_ADDRESSES__',()=>JSON.stringify([...proxyAddresses]).replace(/</g,'\\u003c'));
+  interceptScript = interceptScript.replace('__ATLAS_PROXY_ADDRESSES__', () =>
+    JSON.stringify([...proxyAddresses]).replace(/</g, '\\u003c')
+  );
   if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head[^>]*>/i, match => match + metadataBootstrap + contentFilterBootstrap + isolationRuntime + darkStyle + interceptScript);
+    return html.replace(
+      /<head[^>]*>/i,
+      match => match + metadataBootstrap + contentFilterBootstrap + isolationRuntime + darkStyle + interceptScript
+    );
   }
   return metadataBootstrap + contentFilterBootstrap + isolationRuntime + darkStyle + interceptScript + html;
 }
 
 const mimeTypes = {
-  "html": "text/html; charset=utf-8",
-  "js": "text/javascript; charset=utf-8",
-  "mjs": "text/javascript; charset=utf-8",
-  "css": "text/css; charset=utf-8",
-  "json": "application/json; charset=utf-8",
-  "png": "image/png",
-  "jpg": "image/jpeg",
-  "jpeg": "image/jpeg",
-  "webp": "image/webp",
-  "avif": "image/avif",
-  "gif": "image/gif",
-  "svg": "image/svg+xml",
-  "ico": "image/x-icon",
-  "map": "application/json",
-  "txt": "text/plain; charset=utf-8"
+  html: 'text/html; charset=utf-8',
+  js: 'text/javascript; charset=utf-8',
+  mjs: 'text/javascript; charset=utf-8',
+  css: 'text/css; charset=utf-8',
+  json: 'application/json; charset=utf-8',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  avif: 'image/avif',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  ico: 'image/x-icon',
+  map: 'application/json',
+  txt: 'text/plain; charset=utf-8',
 };
 
 async function appHandler(req, res) {
-  const reqUrl = new URL(req.url, `http://${req.headers.host || "localhost:8080"}`);
-  const legacyRoute=({'/proxy':'/view','/proxy-raw':'/resource'})[reqUrl.pathname];
-  if(legacyRoute)reqUrl.pathname=legacyRoute;
+  const reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost:8080'}`);
+  const legacyRoute = { '/proxy': '/view', '/proxy-raw': '/resource' }[reqUrl.pathname];
+  if (legacyRoute) reqUrl.pathname = legacyRoute;
   const isolated = isContentHost(req.headers.host || '', deployment);
   const localHost = /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers.host || '');
   if (!isolated && !localHost && deployment.publicOrigin && !deployment.publicHosts.includes(req.headers.host)) {
-    res.writeHead(421); res.end('Unknown Atlas host'); return;
+    res.writeHead(421);
+    res.end('Unknown Atlas host');
+    return;
   }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy','credentialless');
-  if (isolated) res.setHeader('Cross-Origin-Resource-Policy','cross-origin');
-  if(await proxyEngines(req,res,reqUrl))return;
-  if (['/view','/resource'].includes(reqUrl.pathname)) {
-    if(reqUrl.searchParams.has('token')) {
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  if (isolated) res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  if (await proxyEngines(req, res, reqUrl)) return;
+  if (['/view', '/resource'].includes(reqUrl.pathname)) {
+    if (reqUrl.searchParams.has('token')) {
       try {
-        if(reqUrl.searchParams.getAll('token').length!==1||reqUrl.searchParams.has('url'))throw new Error();
-        const value=urlCodec.open(reqUrl.searchParams.get('token'));
-        if(value.kind!==(reqUrl.pathname==='/view'?'document':'resource')||!['http:','https:'].includes(new URL(value.url).protocol))throw new Error();
-        reqUrl.search='';reqUrl.searchParams.set('url',value.url);
-        if(value.wisp)reqUrl.searchParams.set('wisp',value.wisp);
-        reqUrl.searchParams.set('block_ads',value.blockAds!==false);
-        reqUrl.searchParams.set('block_fp',value.blockFingerprint!==false);
-        if(value.kind==='resource')reqUrl.searchParams.set('compat','2');
-      } catch {res.writeHead(400,{'Content-Type':'text/plain','Cache-Control':'no-store'});res.end('Invalid or expired proxy address. Reload Atlas to refresh this address.');return;}
+        if (reqUrl.searchParams.getAll('token').length !== 1 || reqUrl.searchParams.has('url')) throw new Error();
+        const value = urlCodec.open(reqUrl.searchParams.get('token'));
+        if (
+          value.kind !== (reqUrl.pathname === '/view' ? 'document' : 'resource') ||
+          !['http:', 'https:'].includes(new URL(value.url).protocol)
+        )
+          throw new Error();
+        reqUrl.search = '';
+        reqUrl.searchParams.set('url', value.url);
+        if (value.wisp) reqUrl.searchParams.set('wisp', value.wisp);
+        reqUrl.searchParams.set('block_ads', value.blockAds !== false);
+        reqUrl.searchParams.set('block_fp', value.blockFingerprint !== false);
+        if (value.kind === 'resource') reqUrl.searchParams.set('compat', '2');
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+        res.end('Invalid or expired proxy address. Reload Atlas to refresh this address.');
+        return;
+      }
     }
     try {
       const target = reqUrl.searchParams.get('url');
       const origin = contentOrigin(target, deployment);
-      const hadToken=new URL(req.url,'http://atlas.local').searchParams.has('token');
-      if (legacyRoute || new URL(origin).host !== req.headers.host || !hadToken || new URL(req.url,'http://atlas.local').searchParams.size!==1) {
-        res.writeHead(307, { 'Cache-Control':'no-store',Location:proxyAddress(target,reqUrl.searchParams.get('wisp')||deployment.localWisp,reqUrl.pathname==='/view',reqUrl.searchParams.get('block_ads')!=='false',reqUrl.searchParams.get('block_fp')!=='false') }); res.end(); return;
+      const hadToken = new URL(req.url, 'http://atlas.local').searchParams.has('token');
+      if (
+        legacyRoute ||
+        new URL(origin).host !== req.headers.host ||
+        !hadToken ||
+        new URL(req.url, 'http://atlas.local').searchParams.size !== 1
+      ) {
+        res.writeHead(307, {
+          'Cache-Control': 'no-store',
+          Location: proxyAddress(
+            target,
+            reqUrl.searchParams.get('wisp') || deployment.localWisp,
+            reqUrl.pathname === '/view',
+            reqUrl.searchParams.get('block_ads') !== 'false',
+            reqUrl.searchParams.get('block_fp') !== 'false'
+          ),
+        });
+        res.end();
+        return;
       }
     } catch {
-      res.writeHead(503, { 'Content-Type':'text/plain' }); res.end('Isolated content hosting must be configured before browsing.'); return;
+      res.writeHead(503, { 'Content-Type': 'text/plain' });
+      res.end('Isolated content hosting must be configured before browsing.');
+      return;
     }
-  } else if ((isolated || !deployment.proxyOriginTemplate) && !['/atlas-origin.js','/proxy-origin.js','/atlas-url-crypto.js','/atlas-page-storage.js'].includes(reqUrl.pathname)) {
+  } else if (
+    (isolated || !deployment.proxyOriginTemplate) &&
+    !['/atlas-origin.js', '/proxy-origin.js', '/atlas-url-crypto.js', '/atlas-page-storage.js'].includes(
+      reqUrl.pathname
+    )
+  ) {
     try {
       let original;
       if (!deployment.proxyOriginTemplate && req.headers.referer) {
-        const referer=new URL(req.headers.referer);
-        if(referer.origin===deployment.requestOrigin && ['/view','/resource'].includes(referer.pathname))original=referer.searchParams.has('token') ? urlCodec.open(referer.searchParams.get('token')).url : referer.searchParams.get('url');
-      } else if(isolated) original=contentUpstreamOrigin(req.headers.host, deployment);
+        const referer = new URL(req.headers.referer);
+        if (referer.origin === deployment.requestOrigin && ['/view', '/resource'].includes(referer.pathname))
+          original = referer.searchParams.has('token')
+            ? urlCodec.open(referer.searchParams.get('token')).url
+            : referer.searchParams.get('url');
+      } else if (isolated) original = contentUpstreamOrigin(req.headers.host, deployment);
       if (!original) throw new Error();
       const resolved = new URL(reqUrl.pathname + reqUrl.search, original).href;
-      res.writeHead(307, { Location:proxyAddress(resolved,deployment.localWisp,['document','iframe'].includes(req.headers['sec-fetch-dest'])) }); res.end(); return;
-    } catch { if(isolated){res.writeHead(404); res.end('Not Found'); return;} }
+      res.writeHead(307, {
+        Location: proxyAddress(
+          resolved,
+          deployment.localWisp,
+          ['document', 'iframe'].includes(req.headers['sec-fetch-dest'])
+        ),
+      });
+      res.end();
+      return;
+    } catch {
+      if (isolated) {
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+    }
   }
   if (!isolated && req.headers.origin && req.headers.origin !== (deployment.requestOrigin || reqUrl.origin)) {
-    res.writeHead(403); res.end('Cross-origin application request refused'); return;
-  }
-
-  if (reqUrl.pathname === "/api/favicon" || reqUrl.pathname === "/favicon.ico") {
-    try {
-      const domain = reqUrl.searchParams.get('domain');
-      const icon = domain ? await cachedFavicon(domain) : { data: await fs.readFile(path.join(__dirname, 'assets', 'atlas.png')), contentType: 'image/png' };
-      const etag = '"' + createHash('sha256').update(icon.data).digest('hex') + '"';
-      res.setHeader('ETag', etag);
-      res.setHeader('Cache-Control', `public, max-age=${icon.fallback ? 3600 : 604800}`);
-      if (req.headers['if-none-match'] === etag) { res.writeHead(304); res.end(); return; }
-      res.writeHead(200, { 'Content-Type': icon.contentType, 'Content-Length': icon.data.length });
-      res.end(icon.data);
-    } catch { res.writeHead(400); res.end('Invalid favicon domain'); }
+    res.writeHead(403);
+    res.end('Cross-origin application request refused');
     return;
   }
 
-  if (req.method === "OPTIONS" && !isolated) {
+  if (reqUrl.pathname === '/api/favicon' || reqUrl.pathname === '/favicon.ico') {
+    try {
+      const domain = reqUrl.searchParams.get('domain');
+      const icon = domain
+        ? await cachedFavicon(domain)
+        : { data: await fs.readFile(path.join(__dirname, 'assets', 'atlas.png')), contentType: 'image/png' };
+      const etag = '"' + createHash('sha256').update(icon.data).digest('hex') + '"';
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', `public, max-age=${icon.fallback ? 3600 : 604800}`);
+      if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304);
+        res.end();
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': icon.contentType, 'Content-Length': icon.data.length });
+      res.end(icon.data);
+    } catch {
+      res.writeHead(400);
+      res.end('Invalid favicon domain');
+    }
+    return;
+  }
+
+  if (req.method === 'OPTIONS' && !isolated) {
     res.writeHead(204);
     res.end();
     return;
   }
 
-  if (reqUrl.pathname === "/api/suggestions") {
-    const q = (reqUrl.searchParams.get("q") || "").trim().slice(0, 256);
+  if (reqUrl.pathname === '/api/suggestions') {
+    const q = (reqUrl.searchParams.get('q') || '').trim().slice(0, 256);
     if (!q) {
-      res.writeHead(200, { "Content-Type": "application/json" });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify([]));
       return;
     }
@@ -1101,31 +1268,37 @@ async function appHandler(req, res) {
     const reply = suggestions => {
       if (answered || res.headersSent || res.destroyed) return;
       answered = true;
-      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(suggestions));
     };
     try {
       const suggestUrl = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(q)}`;
-      const sReq = https.get(suggestUrl, { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 4000 }, (sRes) => {
-        let raw = "";
-        sRes.setEncoding("utf8");
-        sRes.on("data", chunk => {
+      const sReq = https.get(suggestUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4000 }, sRes => {
+        let raw = '';
+        sRes.setEncoding('utf8');
+        sRes.on('data', chunk => {
           raw += chunk;
-          if (raw.length > 65536) { reply([]); sReq.destroy(); }
+          if (raw.length > 65536) {
+            reply([]);
+            sReq.destroy();
+          }
         });
-        sRes.on("error", () => reply([]));
-        sRes.on("end", () => {
+        sRes.on('error', () => reply([]));
+        sRes.on('end', () => {
           try {
             const parsed = JSON.parse(raw);
             const suggestions = Array.isArray(parsed) && Array.isArray(parsed[1]) ? parsed[1] : [];
-            reply(suggestions.filter(value => typeof value === "string").slice(0, 8));
+            reply(suggestions.filter(value => typeof value === 'string').slice(0, 8));
           } catch {
             reply([]);
           }
         });
       });
-      sReq.on("error", () => reply([]));
-      sReq.on("timeout", () => { reply([]); sReq.destroy(); });
+      sReq.on('error', () => reply([]));
+      sReq.on('timeout', () => {
+        reply([]);
+        sReq.destroy();
+      });
     } catch {
       reply([]);
     }
@@ -1133,25 +1306,28 @@ async function appHandler(req, res) {
   }
 
   if (reqUrl.pathname === '/api/clock') {
-    res.writeHead(200, { 'Content-Type':'application/json', 'Cache-Control':'no-store' });
-    res.end(JSON.stringify({ time:Date.now() }));
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ time: Date.now() }));
     return;
   }
 
-  if (reqUrl.pathname === "/api/status") {
-    const defaultWisp = deployment.publicWisp || `ws://${req.headers.host || "localhost:8080"}/wisp/`;
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      status: "online",
-      version: "0.5.0",
-      local_wisp: defaultWisp,
-      port: PORT
-    }));
+  if (reqUrl.pathname === '/api/status') {
+    const defaultWisp = deployment.publicWisp || `ws://${req.headers.host || 'localhost:8080'}/wisp/`;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        status: 'online',
+        version: '0.5.0',
+        local_wisp: defaultWisp,
+        port: PORT,
+      })
+    );
     return;
   }
 
-  if (reqUrl.pathname === "/api/test-wisp") {
-    const targetWisp = reqUrl.searchParams.get("wisp") || reqUrl.searchParams.get("url") || `ws://localhost:${PORT}/wisp/`;
+  if (reqUrl.pathname === '/api/test-wisp') {
+    const targetWisp =
+      reqUrl.searchParams.get('wisp') || reqUrl.searchParams.get('url') || `ws://localhost:${PORT}/wisp/`;
     const startTime = Date.now();
     try {
       const conn = await getWispConnection(targetWisp);
@@ -1159,98 +1335,162 @@ async function appHandler(req, res) {
 
       let probeOk = false;
       try {
-        const stream = conn.create_stream("cloudflare.com", 80);
-        await new Promise((resolve) => {
+        const stream = conn.create_stream('cloudflare.com', 80);
+        await new Promise(resolve => {
           const t = setTimeout(() => {
-            try { stream.close(); } catch {}
+            try {
+              stream.close();
+            } catch {}
             resolve();
           }, 3000);
           stream.onmessage = () => {
             clearTimeout(t);
             probeOk = true;
-            try { stream.close(); } catch {}
+            try {
+              stream.close();
+            } catch {}
             resolve();
           };
-          stream.send(new TextEncoder().encode("HEAD /cdn-cgi/trace HTTP/1.1\r\nHost: cloudflare.com\r\nConnection: close\r\n\r\n"));
+          stream.send(
+            new TextEncoder().encode(
+              'HEAD /cdn-cgi/trace HTTP/1.1\r\nHost: cloudflare.com\r\nConnection: close\r\n\r\n'
+            )
+          );
         });
       } catch {}
 
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        ok: true,
-        endpoint: targetWisp,
-        latency_ms: pingMs,
-        wisp_version: conn.wisp_version || 2,
-        udp_enabled: !!conn.udp_enabled,
-        motd: conn.server_motd || "Ready",
-        probe_ok: probeOk
-      }));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          endpoint: targetWisp,
+          latency_ms: pingMs,
+          wisp_version: conn.wisp_version || 2,
+          udp_enabled: !!conn.udp_enabled,
+          motd: conn.server_motd || 'Ready',
+          probe_ok: probeOk,
+        })
+      );
     } catch (err) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        ok: false,
-        endpoint: targetWisp,
-        error: err.message || "Failed to connect to Wisp server"
-      }));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: false,
+          endpoint: targetWisp,
+          error: err.message || 'Failed to connect to Wisp server',
+        })
+      );
     }
     return;
   }
 
-  if (reqUrl.pathname === "/resource") {
-    const rawTarget = reqUrl.searchParams.get("url") || "";
-    const targetWisp = reqUrl.searchParams.get("wisp") || `ws://localhost:${PORT}/wisp/`;
+  if (reqUrl.pathname === '/resource') {
+    const rawTarget = reqUrl.searchParams.get('url') || '';
+    const targetWisp = reqUrl.searchParams.get('wisp') || `ws://localhost:${PORT}/wisp/`;
 
     if (!rawTarget) {
-      res.writeHead(400, { "Content-Type": "text/plain" });
-      res.end("Missing url parameter");
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('Missing url parameter');
       return;
     }
 
     try {
       const headers = upstreamHeaders(req, rawTarget, deployment);
-      const body = !['GET','HEAD'].includes(req.method) ? req : undefined;
-      const options = {timeout:30000, method:req.method, headers, body, noRedirect:true, relay:deployment.normalizeRelay(targetWisp), responseSink:res,
-        buildResponseHeaders:response => ({...responseHeaders(req,response,deployment,rawTarget), 'Cache-Control':headers.authorization || headers.cookie || response.headers['set-cookie'] ? 'no-store' : (response.headers['cache-control'] || 'no-store')})};
+      const body = !['GET', 'HEAD'].includes(req.method) ? req : undefined;
+      const options = {
+        timeout: 30000,
+        method: req.method,
+        headers,
+        body,
+        noRedirect: true,
+        relay: deployment.normalizeRelay(targetWisp),
+        responseSink: res,
+        buildResponseHeaders: response => ({
+          ...responseHeaders(req, response, deployment, rawTarget),
+          'Cache-Control':
+            headers.authorization || headers.cookie || response.headers['set-cookie']
+              ? 'no-store'
+              : response.headers['cache-control'] || 'no-store',
+        }),
+      };
       const response = await fetchOverWisp(targetWisp, rawTarget, options);
       if (!response.streamed && /javascript|ecmascript/i.test(response.headers['content-type'] || '')) {
-        response.buffer = Buffer.from(rewriteLocations(response.buffer.toString('utf8'),url=>resolveToProxy(url,rawTarget,targetWisp,false,reqUrl.searchParams.get('block_ads')!=='false',reqUrl.searchParams.get('block_fp')!=='false'),rawTarget));
+        response.buffer = Buffer.from(
+          rewriteLocations(
+            response.buffer.toString('utf8'),
+            url =>
+              resolveToProxy(
+                url,
+                rawTarget,
+                targetWisp,
+                false,
+                reqUrl.searchParams.get('block_ads') !== 'false',
+                reqUrl.searchParams.get('block_fp') !== 'false'
+              ),
+            rawTarget
+          )
+        );
       }
       if (!response.streamed && /text\/css/i.test(response.headers['content-type'] || '')) {
-        response.buffer = Buffer.from(rewriteCss(response.buffer.toString('utf8'),url=>resolveToProxy(url,rawTarget,targetWisp,false)));
+        response.buffer = Buffer.from(
+          rewriteCss(response.buffer.toString('utf8'), url => resolveToProxy(url, rawTarget, targetWisp, false))
+        );
       }
       if (response.streamed) return;
-      const contentType = response.headers["content-type"] || "application/octet-stream";
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
       if (response.headers.location) {
         const target = new URL(response.headers.location, rawTarget).href;
-        res.writeHead(response.statusCode, { ...responseHeaders(req,response,deployment,rawTarget), Location:proxyAddress(target,targetWisp,false,reqUrl.searchParams.get('block_ads')!=='false',reqUrl.searchParams.get('block_fp')!=='false') }); res.end(); return;
+        res.writeHead(response.statusCode, {
+          ...responseHeaders(req, response, deployment, rawTarget),
+          Location: proxyAddress(
+            target,
+            targetWisp,
+            false,
+            reqUrl.searchParams.get('block_ads') !== 'false',
+            reqUrl.searchParams.get('block_fp') !== 'false'
+          ),
+        });
+        res.end();
+        return;
       }
       res.writeHead(response.statusCode || 200, {
-        ...responseHeaders(req, response, deployment,rawTarget),
-        "Content-Type": contentType,
-        "Cache-Control": req.method !== 'GET' || headers.Authorization || headers.authorization || headers.cookie || response.headers['set-cookie'] || /json|html/i.test(contentType) ? 'no-store' : (response.headers['cache-control'] || 'public, max-age=86400')
+        ...responseHeaders(req, response, deployment, rawTarget),
+        'Content-Type': contentType,
+        'Cache-Control':
+          req.method !== 'GET' ||
+          headers.Authorization ||
+          headers.authorization ||
+          headers.cookie ||
+          response.headers['set-cookie'] ||
+          /json|html/i.test(contentType)
+            ? 'no-store'
+            : response.headers['cache-control'] || 'public, max-age=86400',
       });
       res.end(response.buffer);
     } catch (err) {
-      if (res.headersSent || res.destroyed) { res.destroy(); return; }
-      res.writeHead(502, { "Content-Type": "text/plain" });
-      res.end("Failed to fetch over Wisp: " + err.message);
+      if (res.headersSent || res.destroyed) {
+        res.destroy();
+        return;
+      }
+      res.writeHead(502, { 'Content-Type': 'text/plain' });
+      res.end('Failed to fetch over Wisp: ' + err.message);
     }
     return;
   }
 
-  if (reqUrl.pathname === "/view") {
-    const rawTarget = reqUrl.searchParams.get("url") || "";
-    const targetWisp = reqUrl.searchParams.get("wisp") || `ws://localhost:${PORT}/wisp/`;
+  if (reqUrl.pathname === '/view') {
+    const rawTarget = reqUrl.searchParams.get('url') || '';
+    const targetWisp = reqUrl.searchParams.get('wisp') || `ws://localhost:${PORT}/wisp/`;
 
     if (!rawTarget) {
-      res.writeHead(400, { "Content-Type": "text/plain" });
-      res.end("Missing url parameter");
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('Missing url parameter');
       return;
     }
 
     let normalized = rawTarget;
-    if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
-      normalized = "https://" + normalized;
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = 'https://' + normalized;
     }
 
     try {
@@ -1258,44 +1498,55 @@ async function appHandler(req, res) {
         timeout: 30000,
         method: req.method,
         headers: upstreamHeaders(req, normalized, deployment),
-        noRedirect: true
+        noRedirect: true,
       };
-      if (!['GET','HEAD'].includes(req.method)) {
+      if (!['GET', 'HEAD'].includes(req.method)) {
         fetchOpts.body = req;
-        if (req.headers["content-type"]) {
-          fetchOpts.headers["Content-Type"] = req.headers["content-type"];
+        if (req.headers['content-type']) {
+          fetchOpts.headers['Content-Type'] = req.headers['content-type'];
         }
       }
 
       const response = await fetchOverWisp(targetWisp, normalized, fetchOpts);
       if (response.headers.location) {
         const target = new URL(response.headers.location, normalized).href;
-        res.writeHead(response.statusCode, { ...responseHeaders(req,response,deployment,normalized), Location:proxyAddress(target,targetWisp,true,reqUrl.searchParams.get('block_ads')!=='false',reqUrl.searchParams.get('block_fp')!=='false') }); res.end(); return;
+        res.writeHead(response.statusCode, {
+          ...responseHeaders(req, response, deployment, normalized),
+          Location: proxyAddress(
+            target,
+            targetWisp,
+            true,
+            reqUrl.searchParams.get('block_ads') !== 'false',
+            reqUrl.searchParams.get('block_fp') !== 'false'
+          ),
+        });
+        res.end();
+        return;
       }
 
-      const contentType = response.headers["content-type"] || "text/html";
+      const contentType = response.headers['content-type'] || 'text/html';
 
-      if (contentType.toLowerCase().includes("text/html")) {
-        let html = response.buffer.toString("utf8");
-        const blockAdsParam = reqUrl.searchParams.get("block_ads") !== "false";
-        const blockFpParam = reqUrl.searchParams.get("block_fp") !== "false";
+      if (contentType.toLowerCase().includes('text/html')) {
+        let html = response.buffer.toString('utf8');
+        const blockAdsParam = reqUrl.searchParams.get('block_ads') !== 'false';
+        const blockFpParam = reqUrl.searchParams.get('block_fp') !== 'false';
         html = rewriteHtmlForProxy(html, response.targetUrl || normalized, targetWisp, blockAdsParam, blockFpParam);
 
         res.writeHead(response.statusCode || 200, {
-          ...responseHeaders(req, response, deployment,normalized),
+          ...responseHeaders(req, response, deployment, normalized),
           'Cache-Control': 'no-store',
-          "Content-Type": "text/html; charset=utf-8"
+          'Content-Type': 'text/html; charset=utf-8',
         });
         res.end(html);
       } else {
         res.writeHead(response.statusCode || 200, {
-          "Content-Type": contentType,
-          "Content-Length": response.buffer.length
+          'Content-Type': contentType,
+          'Content-Length': response.buffer.length,
         });
         res.end(response.buffer);
       }
     } catch (err) {
-      res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(`
         <!DOCTYPE html>
         <html>
@@ -1435,122 +1686,257 @@ async function appHandler(req, res) {
   }
 
   try {
-    const isAppPage = ["/", "/home", "/apps", "/settings"].includes(reqUrl.pathname);
+    const isAppPage = ['/', '/home', '/apps', '/settings'].includes(reqUrl.pathname);
     if (!isAppPage && !isPublicAtlasFile(reqUrl.pathname)) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end("Not Found");
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
       return;
     }
     const staticRoot = reqUrl.pathname.startsWith('/assets/') ? __dirname : path.join(__dirname, 'public');
-    let filePath = path.join(staticRoot, isAppPage ? "index.html" : reqUrl.pathname==='/atlas-origin.js'?'/proxy-origin.js':reqUrl.pathname);
+    let filePath = path.join(
+      staticRoot,
+      isAppPage ? 'index.html' : reqUrl.pathname === '/atlas-origin.js' ? '/proxy-origin.js' : reqUrl.pathname
+    );
     filePath = path.normalize(filePath);
 
     if (!filePath.startsWith(staticRoot + path.sep)) {
-      res.writeHead(403, { "Content-Type": "text/plain" });
-      res.end("Forbidden");
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
       return;
     }
 
     let stats = await fs.stat(filePath);
     if (stats && stats.isDirectory()) {
-      filePath = path.join(filePath, "index.html");
+      filePath = path.join(filePath, 'index.html');
       stats = await fs.stat(filePath);
     }
 
     let data = await fs.readFile(filePath);
     if (isAppPage) {
-      res.setHeader('Cross-Origin-Opener-Policy','same-origin');
-      res.setHeader('Cross-Origin-Embedder-Policy','credentialless');
-      const config = JSON.stringify({ build:atlasBuild, production:deployment.production, defaultWisp:(deployment.requestOrigin || reqUrl.origin).replace(/^http/,'ws')+'/wisp/', publicOrigin: deployment.requestOrigin || reqUrl.origin, contentMode:deployment.contentMode, proxyOriginTemplate: deployment.proxyOriginTemplate,urlCodec:urlCodec.issue() }).replace(/</g,'\\u003c');
-      data = Buffer.from(data.toString().replace('<head>', '<head><script>window.__atlasConfig=' + config + ';</script>'));
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+      const config = JSON.stringify({
+        build: atlasBuild,
+        production: deployment.production,
+        defaultWisp: (deployment.requestOrigin || reqUrl.origin).replace(/^http/, 'ws') + '/wisp/',
+        publicOrigin: deployment.requestOrigin || reqUrl.origin,
+        contentMode: deployment.contentMode,
+        proxyOriginTemplate: deployment.proxyOriginTemplate,
+        urlCodec: urlCodec.issue(),
+      }).replace(/</g, '\\u003c');
+      data = Buffer.from(
+        data.toString().replace('<head>', '<head><script>window.__atlasConfig=' + config + ';</script>')
+      );
     }
     const ext = path.extname(filePath).slice(1).toLowerCase();
-    const contentType = mimeTypes[ext] || "application/octet-stream";
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
 
     res.writeHead(200, {
-      "Content-Type": contentType,
-      "Content-Length": data.length,
-      "Cache-Control": filePath === path.join(__dirname, 'assets', 'atlas.png') ? 'no-cache' : ["svg", "png", "jpg", "jpeg", "webp", "gif", "ico", "avif"].includes(ext)
-        ? (reqUrl.searchParams.has('v') ? 'public, max-age=31536000, immutable' : 'public, max-age=604800')
-        : (["html", "css", "js", "json"].includes(ext) ? "no-cache" : "public, max-age=3600")
+      'Content-Type': contentType,
+      'Content-Length': data.length,
+      'Cache-Control':
+        filePath === path.join(__dirname, 'assets', 'atlas.png')
+          ? 'no-cache'
+          : ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'ico', 'avif'].includes(ext)
+            ? reqUrl.searchParams.has('v')
+              ? 'public, max-age=31536000, immutable'
+              : 'public, max-age=604800'
+            : ['html', 'css', 'js', 'json'].includes(ext)
+              ? 'no-cache'
+              : 'public, max-age=3600',
     });
     res.end(data);
   } catch (err) {
-    res.writeHead(404, { "Content-Type": "text/plain" });
-    res.end("Not Found");
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
   }
 }
 
-const atlasSocketServer = new WebSocketServer({noServer:true, maxPayload:1048576, perMessageDeflate:false, handleProtocols:(_protocols,req)=>req.atlasProtocol || false});
+const atlasSocketServer = new WebSocketServer({
+  noServer: true,
+  maxPayload: 1048576,
+  perMessageDeflate: false,
+  handleProtocols: (_protocols, req) => req.atlasProtocol || false,
+});
 async function routeAtlasUpgrade(req, socket, head) {
   const requestUrl = new URL(req.url, 'http://atlas.local');
   if (requestUrl.pathname === '/default-wisp/') {
     const localHost = /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers.host || '');
-    if ((!localHost && deployment.publicOrigin && !deployment.publicHosts.includes(req.headers.host)) || req.headers.origin !== deployment.requestOrigin || requestUrl.search) { socket.destroy(); return; }
-    defaultRelayUpgrade(req,socket,head); return;
+    if (
+      (!localHost && deployment.publicOrigin && !deployment.publicHosts.includes(req.headers.host)) ||
+      req.headers.origin !== deployment.requestOrigin ||
+      requestUrl.search
+    ) {
+      socket.destroy();
+      return;
+    }
+    defaultRelayUpgrade(req, socket, head);
+    return;
   }
   if (requestUrl.pathname === '/wisp/') {
-    const approvedAlias = deployment.production && deployment.publicHosts.some(host => req.headers.origin === 'https://' + host);
-    if (req.headers.origin && !approvedAlias && req.headers.origin !== (deployment.requestOrigin || 'http://'+req.headers.host)) { socket.destroy(); return; }
-    wisp.routeRequest(req, socket, head); return;
+    const approvedAlias =
+      deployment.production && deployment.publicHosts.some(host => req.headers.origin === 'https://' + host);
+    if (
+      req.headers.origin &&
+      !approvedAlias &&
+      req.headers.origin !== (deployment.requestOrigin || 'http://' + req.headers.host)
+    ) {
+      socket.destroy();
+      return;
+    }
+    wisp.routeRequest(req, socket, head);
+    return;
   }
-  if (requestUrl.pathname !== '/atlas-websocket') { socket.destroy(); return; }
+  if (requestUrl.pathname !== '/atlas-websocket') {
+    socket.destroy();
+    return;
+  }
   let target, source;
   try {
-    if(requestUrl.searchParams.has('token')) {
-      if(requestUrl.searchParams.getAll('token').length!==1||requestUrl.searchParams.has('url')||requestUrl.searchParams.has('source'))throw new Error();
-      const value=urlCodec.open(requestUrl.searchParams.get('token'));
-      if(value.kind!=='socket')throw new Error();
-      requestUrl.search='';requestUrl.searchParams.set('url',value.url);requestUrl.searchParams.set('source',value.source);
+    if (requestUrl.searchParams.has('token')) {
+      if (
+        requestUrl.searchParams.getAll('token').length !== 1 ||
+        requestUrl.searchParams.has('url') ||
+        requestUrl.searchParams.has('source')
+      )
+        throw new Error();
+      const value = urlCodec.open(requestUrl.searchParams.get('token'));
+      if (value.kind !== 'socket') throw new Error();
+      requestUrl.search = '';
+      requestUrl.searchParams.set('url', value.url);
+      requestUrl.searchParams.set('source', value.source);
     }
     target = new URL(requestUrl.searchParams.get('url'));
     source = new URL(requestUrl.searchParams.get('source'));
-    if (!['ws:','wss:'].includes(target.protocol) || target.username || target.password || new URL(contentOrigin(source.href,deployment)).host !== req.headers.host) throw new Error();
-    if (req.headers.origin !== contentOrigin(source.href,deployment)) throw new Error();
-  } catch { socket.destroy(); return; }
-  let upstream, duplex, secure, client, closed=false;
-  const close=()=>{if(closed)return;closed=true;upstream?.terminate();secure?.destroy();duplex?.destroy();if(client?.readyState<WebSocket.CLOSING)client.close();else if(!client)socket.destroy();};
-  socket.on('close',close);socket.on('error',close);
+    if (
+      !['ws:', 'wss:'].includes(target.protocol) ||
+      target.username ||
+      target.password ||
+      new URL(contentOrigin(source.href, deployment)).host !== req.headers.host
+    )
+      throw new Error();
+    if (req.headers.origin !== contentOrigin(source.href, deployment)) throw new Error();
+  } catch {
+    socket.destroy();
+    return;
+  }
+  let upstream,
+    duplex,
+    secure,
+    client,
+    closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    upstream?.terminate();
+    secure?.destroy();
+    duplex?.destroy();
+    if (client?.readyState < WebSocket.CLOSING) client.close();
+    else if (!client) socket.destroy();
+  };
+  socket.on('close', close);
+  socket.on('error', close);
   try {
-    const connection=await getWispConnection(deployment.localWisp);if(closed)return;
-    const stream=connection.create_stream(target.hostname,Number(target.port || (target.protocol==='wss:'?443:80)));
-    duplex=createWispDuplex(stream);duplex.on('error',close);
-    secure=target.protocol==='wss:'?tls.connect({socket:duplex,servername:target.hostname,minVersion:'TLSv1.2',rejectUnauthorized:true,ALPNProtocols:['http/1.1']}):duplex;
-    secure.on('error',close);
-    const protocols=(req.headers['sec-websocket-protocol'] || '').split(',').map(value=>value.trim()).filter(Boolean);
-    const headers={Origin:source.origin};
-    const httpTarget=new URL(target);httpTarget.protocol=target.protocol==='wss:'?'https:':'http:';
-    if(source.origin===httpTarget.origin && req.headers.cookie) {
-      const scoped=upstreamHeaders({headers:req.headers,method:'GET'},httpTarget.href,deployment).cookie;
-      if(scoped)headers.Cookie=scoped;
+    const connection = await getWispConnection(deployment.localWisp);
+    if (closed) return;
+    const stream = connection.create_stream(
+      target.hostname,
+      Number(target.port || (target.protocol === 'wss:' ? 443 : 80))
+    );
+    duplex = createWispDuplex(stream);
+    duplex.on('error', close);
+    secure =
+      target.protocol === 'wss:'
+        ? tls.connect({
+            socket: duplex,
+            servername: target.hostname,
+            minVersion: 'TLSv1.2',
+            rejectUnauthorized: true,
+            ALPNProtocols: ['http/1.1'],
+          })
+        : duplex;
+    secure.on('error', close);
+    const protocols = (req.headers['sec-websocket-protocol'] || '')
+      .split(',')
+      .map(value => value.trim())
+      .filter(Boolean);
+    const headers = { Origin: source.origin };
+    const httpTarget = new URL(target);
+    httpTarget.protocol = target.protocol === 'wss:' ? 'https:' : 'http:';
+    if (source.origin === httpTarget.origin && req.headers.cookie) {
+      const scoped = upstreamHeaders({ headers: req.headers, method: 'GET' }, httpTarget.href, deployment).cookie;
+      if (scoped) headers.Cookie = scoped;
     }
-    upstream=new WebSocket(target.href,protocols,{createConnection:()=>secure,agent:false,headers,handshakeTimeout:10000,maxPayload:1048576,perMessageDeflate:false});
-    upstream.on('error',close);upstream.on('close',close);
-    await new Promise((resolve,reject)=>{upstream.once('open',()=>{upstream.pause();resolve();});upstream.once('error',reject);upstream.once('close',()=>reject(new Error('Upstream WebSocket closed')));});
-    if(closed)return;
+    upstream = new WebSocket(target.href, protocols, {
+      createConnection: () => secure,
+      agent: false,
+      headers,
+      handshakeTimeout: 10000,
+      maxPayload: 1048576,
+      perMessageDeflate: false,
+    });
+    upstream.on('error', close);
+    upstream.on('close', close);
+    await new Promise((resolve, reject) => {
+      upstream.once('open', () => {
+        upstream.pause();
+        resolve();
+      });
+      upstream.once('error', reject);
+      upstream.once('close', () => reject(new Error('Upstream WebSocket closed')));
+    });
+    if (closed) return;
 
-    upstream.pause();req.atlasProtocol=upstream.protocol;
-    atlasSocketServer.handleUpgrade(req,socket,head,accepted=>{
-      client=accepted;client.on('close',close);client.on('error',close);
-      client.on('message',(data,binary)=>{if(upstream.readyState!==WebSocket.OPEN){close();return;}client.pause();upstream.send(data,{binary},error=>error?close():client.resume());});
-      upstream.on('message',(data,binary)=>{if(client.readyState!==WebSocket.OPEN){close();return;}upstream.pause();client.send(data,{binary},error=>error?close():upstream.resume());});
+    upstream.pause();
+    req.atlasProtocol = upstream.protocol;
+    atlasSocketServer.handleUpgrade(req, socket, head, accepted => {
+      client = accepted;
+      client.on('close', close);
+      client.on('error', close);
+      client.on('message', (data, binary) => {
+        if (upstream.readyState !== WebSocket.OPEN) {
+          close();
+          return;
+        }
+        client.pause();
+        upstream.send(data, { binary }, error => (error ? close() : client.resume()));
+      });
+      upstream.on('message', (data, binary) => {
+        if (client.readyState !== WebSocket.OPEN) {
+          close();
+          return;
+        }
+        upstream.pause();
+        client.send(data, { binary }, error => (error ? close() : upstream.resume()));
+      });
       upstream.resume();
     });
-  } catch { close(); }
+  } catch {
+    close();
+  }
 }
 
 function requestOrigin(req) {
-  if(isContentHost(req.headers.host || '',deployment))return deployment.publicOrigin;
-  return (deployment.publicOrigin ? new URL(deployment.publicOrigin).protocol : 'http:')+'//'+req.headers.host;
+  if (isContentHost(req.headers.host || '', deployment)) return deployment.publicOrigin;
+  return (deployment.publicOrigin ? new URL(deployment.publicOrigin).protocol : 'http:') + '//' + req.headers.host;
 }
-const handleRequest = (req,res) => requestContext.run({origin:requestOrigin(req)},()=>appHandler(req,res)).catch(error => {
-  console.warn('HTTP request failed', error.code || error.name || 'request');
-  if (res.headersSent || res.destroyed) { res.destroy(); return; }
-  res.writeHead(500, {'Content-Type':'text/plain'}); res.end('Atlas request failed. Please retry.');
-});
-const server = http.createServer({maxHeaderSize:1024*1024},handleRequest);
-server.on("upgrade", (req, socket, head) => {
-  requestContext.run({origin:requestOrigin(req)},()=>routeAtlasUpgrade(req, socket, head)).catch(() => socket.destroy());
+const handleRequest = (req, res) =>
+  requestContext
+    .run({ origin: requestOrigin(req) }, () => appHandler(req, res))
+    .catch(error => {
+      console.warn('HTTP request failed', error.code || error.name || 'request');
+      if (res.headersSent || res.destroyed) {
+        res.destroy();
+        return;
+      }
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Atlas request failed. Please retry.');
+    });
+const server = http.createServer({ maxHeaderSize: 1024 * 1024 }, handleRequest);
+server.on('upgrade', (req, socket, head) => {
+  requestContext
+    .run({ origin: requestOrigin(req) }, () => routeAtlasUpgrade(req, socket, head))
+    .catch(() => socket.destroy());
 });
 
 server.listen(PORT, deployment.host, () => {
@@ -1561,10 +1947,15 @@ server.listen(PORT, deployment.host, () => {
   console.log(`======================================================\n`);
 });
 
-const fallbackServer = http.createServer({maxHeaderSize:1024*1024},handleRequest);
-fallbackServer.on("upgrade", (req, socket, head) => {
-  requestContext.run({origin:requestOrigin(req)},()=>routeAtlasUpgrade(req, socket, head)).catch(() => socket.destroy());
+const fallbackServer = http.createServer({ maxHeaderSize: 1024 * 1024 }, handleRequest);
+fallbackServer.on('upgrade', (req, socket, head) => {
+  requestContext
+    .run({ origin: requestOrigin(req) }, () => routeAtlasUpgrade(req, socket, head))
+    .catch(() => socket.destroy());
 });
-if (deployment.mirror) fallbackServer.listen(8081, "127.0.0.1", () => {
-  console.log(`IPv4 Mirror: http://127.0.0.1:8081 / ws://127.0.0.1:8081/wisp/`);
-}).on("error", () => {});
+if (deployment.mirror)
+  fallbackServer
+    .listen(8081, '127.0.0.1', () => {
+      console.log(`IPv4 Mirror: http://127.0.0.1:8081 / ws://127.0.0.1:8081/wisp/`);
+    })
+    .on('error', () => {});

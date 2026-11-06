@@ -15,14 +15,13 @@ export const options = {
   allow_tcp_streams: true,
 
   dns_ttl: 120,
-  dns_method: "lookup",
+  dns_method: 'lookup',
   dns_servers: null,
-  dns_result_order: "verbatim",
+  dns_result_order: 'verbatim',
 
   parse_real_ip: true,
-  parse_real_ip_from: ["127.0.0.1"],
+  parse_real_ip_from: ['127.0.0.1'],
 
   wisp_version: 2,
-  wisp_motd: null
-}
-
+  wisp_motd: null,
+};

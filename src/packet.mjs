@@ -7,16 +7,13 @@ export class WispBuffer {
   constructor(data) {
     if (data instanceof Uint8Array) {
       this.from_array(data);
-    }
-    else if (typeof data === "number") {
+    } else if (typeof data === 'number') {
       this.from_array(new Uint8Array(data));
-    }
-    else if (typeof data === "string") {
+    } else if (typeof data === 'string') {
       this.from_array(encode_text(data));
-    }
-    else {
+    } else {
       console.trace();
-      throw "invalid data type passed to wisp buffer constructor";
+      throw 'invalid data type passed to wisp buffer constructor';
     }
   }
 
@@ -45,7 +42,7 @@ export class WispBuffer {
 
 export class WispPacket {
   static min_size = 5;
-  constructor({type, stream_id, payload, payload_bytes }) {
+  constructor({ type, stream_id, payload, payload_bytes }) {
     this.type = type;
     this.stream_id = stream_id;
     this.payload_bytes = payload_bytes;
@@ -55,20 +52,20 @@ export class WispPacket {
     return new WispPacket({
       type: buffer.view.getUint8(0),
       stream_id: buffer.view.getUint32(1, true),
-      payload_bytes: buffer.slice(5)
+      payload_bytes: buffer.slice(5),
     });
   }
   static parse_all(buffer) {
     if (buffer.size < WispPacket.min_size) {
-      throw TypeError("packet too small");
+      throw TypeError('packet too small');
     }
     let packet = WispPacket.parse(buffer);
     let payload_class = packet_classes[packet.type];
-    if (typeof payload_class === "undefined") {
-      throw TypeError("invalid packet type");
+    if (typeof payload_class === 'undefined') {
+      throw TypeError('invalid packet type');
     }
     if (packet.payload_bytes.size < payload_class.min_size) {
-      throw TypeError("payload too small");
+      throw TypeError('payload too small');
     }
     packet.payload = payload_class.parse(packet.payload_bytes);
     return packet;
@@ -85,8 +82,8 @@ export class WispPacket {
 export class ConnectPayload {
   static min_size = 3;
   static type = 0x01;
-  static name = "CONNECT";
-  constructor({stream_type, port, hostname}) {
+  static name = 'CONNECT';
+  constructor({ stream_type, port, hostname }) {
     this.stream_type = stream_type;
     this.port = port;
     this.hostname = hostname;
@@ -95,7 +92,7 @@ export class ConnectPayload {
     return new ConnectPayload({
       stream_type: buffer.view.getUint8(0),
       port: buffer.view.getUint16(1, true),
-      hostname: decode_text(buffer.slice(3).bytes)
+      hostname: decode_text(buffer.slice(3).bytes),
     });
   }
   serialize() {
@@ -110,13 +107,13 @@ export class ConnectPayload {
 export class DataPayload {
   static min_size = 0;
   static type = 0x02;
-  static name = "DATA";
-  constructor({data}) {
+  static name = 'DATA';
+  constructor({ data }) {
     this.data = data;
   }
   static parse(buffer) {
     return new DataPayload({
-      data: buffer
+      data: buffer,
     });
   }
   serialize() {
@@ -127,8 +124,8 @@ export class DataPayload {
 export class ContinuePayload {
   static min_size = 4;
   static type = 0x03;
-  static name = "CONTINUE";
-  constructor({buffer_remaining}) {
+  static name = 'CONTINUE';
+  constructor({ buffer_remaining }) {
     this.buffer_remaining = buffer_remaining;
   }
   static parse(buffer) {
@@ -146,8 +143,8 @@ export class ContinuePayload {
 export class ClosePayload {
   static min_size = 1;
   static type = 0x04;
-  static name = "CLOSE";
-  constructor({reason}) {
+  static name = 'CLOSE';
+  constructor({ reason }) {
     this.reason = reason;
   }
   static parse(buffer) {
@@ -165,8 +162,8 @@ export class ClosePayload {
 export class InfoPayload {
   static min_size = 2;
   static type = 0x05;
-  static name = "INFO";
-  constructor({major_ver, minor_ver, extensions}) {
+  static name = 'INFO';
+  constructor({ major_ver, minor_ver, extensions }) {
     this.major_ver = major_ver;
     this.minor_ver = minor_ver;
     this.extensions = extensions;
@@ -175,7 +172,7 @@ export class InfoPayload {
     return new InfoPayload({
       major_ver: buffer.view.getUint8(0),
       minor_ver: buffer.view.getUint8(1),
-      extensions: buffer.slice(2)
+      extensions: buffer.slice(2),
     });
   }
   serialize() {
@@ -191,21 +188,21 @@ export const packet_classes = {
   0x02: DataPayload,
   0x03: ContinuePayload,
   0x04: ClosePayload,
-  0x05: InfoPayload
-}
+  0x05: InfoPayload,
+};
 
 export const packet_types = {
   CONNECT: 0x01,
   DATA: 0x02,
   CONTINUE: 0x03,
   CLOSE: 0x04,
-  INFO: 0x05
-}
+  INFO: 0x05,
+};
 
 export const stream_types = {
   TCP: 0x01,
-  UDP: 0x02
-}
+  UDP: 0x02,
+};
 
 export const close_reasons = {
   Unknown: 0x01,
@@ -225,5 +222,5 @@ export const close_reasons = {
 
   AuthBadPassword: 0xc0,
   AuthBadSignature: 0xc1,
-  AuthMissingCredentials: 0xc2
-}
+  AuthMissingCredentials: 0xc2,
+};

@@ -1,12 +1,12 @@
-import * as logging from "../logging.mjs";
-import * as filter from "./filter.mjs";
-import { stream_types } from "../packet.mjs";
-import { AsyncWebSocket } from "../websocket.mjs";
-import { NodeTCPSocket } from "./net.mjs";
+import * as logging from '../logging.mjs';
+import * as filter from './filter.mjs';
+import { stream_types } from '../packet.mjs';
+import { AsyncWebSocket } from '../websocket.mjs';
+import { NodeTCPSocket } from './net.mjs';
 
 export class WSProxyConnection {
   constructor(ws, path) {
-    let [hostname, port] = path.split("/").pop().split(":");
+    let [hostname, port] = path.split('/').pop().split(':');
     this.hostname = hostname.trim();
     this.port = parseInt(port);
     this.ws = new AsyncWebSocket(ws);
@@ -31,7 +31,10 @@ export class WSProxyConnection {
       await Promise.allSettled([this.socket.close(), this.ws.close()]);
     };
     for (const task of [this.tcp_to_ws(), this.ws_to_tcp()]) {
-      task.catch(() => logging.error('wsproxy transport task failed')).finally(cleanup).catch(() => {});
+      task
+        .catch(() => logging.error('wsproxy transport task failed'))
+        .finally(cleanup)
+        .catch(() => {});
     }
   }
 

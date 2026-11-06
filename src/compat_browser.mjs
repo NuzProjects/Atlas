@@ -1,4 +1,4 @@
-export const global_this = typeof globalThis === "undefined" ? window : globalThis;
+export const global_this = typeof globalThis === 'undefined' ? window : globalThis;
 
 export const WebSocket = global_this.WebSocket;
 export const crypto = global_this.crypto;

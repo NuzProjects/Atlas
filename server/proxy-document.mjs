@@ -3,8 +3,8 @@ export function installDocumentAddress(document, getURL, baseHref) {
     try {
       Object.defineProperty(document, name, {
         configurable: true,
-        get: name === 'baseURI' && baseHref != null ? () => new URL(baseHref, getURL()).href : getURL
+        get: name === 'baseURI' && baseHref != null ? () => new URL(baseHref, getURL()).href : getURL,
       });
-    } catch { }
+    } catch {}
   }
 }
