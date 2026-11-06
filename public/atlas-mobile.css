@@ -71,20 +71,17 @@
     bottom: 8px;
     width: auto;
     height: auto;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: 44px 44px;
-    gap: 4px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 8px;
     padding: 8px;
     border-radius: 20px !important;
   }
-  #browserView .bottom-left-controls,
-  #browserView .nav-buttons {
-    display: contents;
-  }
   #browserView .bottom-address-wrapper {
-    grid-column: 1 / -1;
-    grid-row: 1;
+    order: -1;
+    flex: 1 0 100%;
     position: relative;
     left: auto;
     transform: none;
@@ -100,13 +97,34 @@
     width: 36px;
     height: 36px;
   }
+  #browserView .bottom-left-controls,
+  #browserView .nav-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9999px;
+    background: var(--btn-bg);
+  }
   #browserView .bottom-bar .home-icon-btn,
   #browserView .bottom-bar .nav-icon-btn {
-    grid-row: 2;
-    justify-self: center;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     padding: 0;
+    border-radius: 9999px;
+    background: transparent !important;
+  }
+  #browserView .bottom-bar .home-icon-btn:active,
+  #browserView .bottom-bar .nav-icon-btn:active,
+  #browserView .bottom-bar .nav-icon-btn[aria-expanded='true'] {
+    background: var(--btn-hover) !important;
+  }
+  #browserView .bottom-bar .home-icon-btn svg,
+  #browserView .bottom-bar .nav-icon-btn svg {
+    width: 17px;
+    height: 17px;
   }
   #atlasSplitButton {
     display: none;
@@ -240,33 +258,14 @@
 
 @media (max-width: 760px) and (max-height: 500px) {
   #browserView .bottom-bar {
-    grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px 44px;
-    grid-template-rows: 44px;
-    gap: 0 4px;
+    flex-wrap: nowrap;
+    gap: 0 6px;
     padding: 4px 8px;
   }
   #browserView .bottom-address-wrapper {
-    grid-column: 3;
-    grid-row: 1;
-  }
-  #browserView .bottom-bar .home-icon-btn,
-  #browserView .bottom-bar .nav-icon-btn {
-    grid-row: 1;
-  }
-  #bottomHomeBtn {
-    grid-column: 1;
-  }
-  #atlasHistoryButton {
-    grid-column: 2;
-  }
-  #navBack {
-    grid-column: 4;
-  }
-  #navForward {
-    grid-column: 5;
-  }
-  #navReload {
-    grid-column: 6;
+    order: 0;
+    flex: 1 1 auto;
+    min-width: 0;
   }
   #browserView .viewport-container {
     margin-bottom: 66px;
