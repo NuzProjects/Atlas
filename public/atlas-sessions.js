@@ -8,7 +8,6 @@ function readAtlasSession(value) {
       clean = [];
     session.tabs.slice(0, MAX_TABS).forEach((tab, index) => {
       if (!tab || typeof tab.url !== 'string') return;
-      if (/^atlas:\/\/assistant\/?$/i.test(tab.url)) tab = { ...tab, url: 'atlas://new', title: 'New Tab' };
       if (!(
         tab.url === '/new-tab' ||
         /^atlas:\/\/(new|search|history)$/i.test(tab.url) ||
@@ -36,8 +35,6 @@ function readAtlasSession(value) {
         url: tab.url,
         title: typeof tab.title === 'string' ? tab.title : 'New Tab',
         isNewTab: tab.url === '/new-tab' || ['atlas://new', 'atlas://search'].includes(tab.url),
-        muted: Boolean(tab.muted),
-        pinned: Boolean(tab.pinned),
       });
     });
     if (!clean.length) return null;
@@ -81,8 +78,6 @@ function persistAtlasSession() {
       title: tab.title,
       navigationEntries: tab.navigationEntries,
       navigationIndex: tab.navigationIndex,
-      muted: tab.muted,
-      pinned: tab.pinned,
     })),
     active: Math.max(
       0,
@@ -108,9 +103,6 @@ function restoreAtlasSession(session) {
         tab.navigationEntries = [...saved.navigationEntries];
         tab.navigationIndex = saved.navigationIndex;
       }
-      tab.muted = saved.muted;
-      tab.pinned = saved.pinned;
-      applyTabMediaState(tab);
       restored.push(tab);
     });
     if (session.split && restored.length === session.tabs.length) {
@@ -181,7 +173,7 @@ if (atlasPreviousSession && !window.__atlasBlankBoot) {
 }
 const atlasOpenTarget = new URLSearchParams(atlasAppURL().search).get('open');
 if (atlasOpenTarget && !window.__atlasBlankBoot) {
-  if (atlasInternalPage(atlasOpenTarget) || /^atlas:\/\/assistant\/?$/i.test(atlasOpenTarget)) {
+  if (atlasInternalPage(atlasOpenTarget)) {
     createTab(atlasOpenTarget, null, false);
     switchView('browser');
   } else {

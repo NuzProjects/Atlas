@@ -724,57 +724,6 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
   }
   window.addEventListener('pointerdown', notifyAtlasFrameFocus, true);
   document.addEventListener('focusin', notifyAtlasFrameFocus, true);
-  var atlasMuted = false;
-
-  var atlasMediaRefs = new Set(), atlasMediaSeen = new WeakSet(), atlasMediaDesired = new WeakMap();
-  var atlasAudioGates = new WeakMap(), atlasAudioGateRefs = new Set();
-  var mediaMutedDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'muted');
-  function trackAtlasMedia(media) {
-    if (!atlasMediaSeen.has(media)) {
-      atlasMediaSeen.add(media); atlasMediaRefs.add(new WeakRef(media));
-      atlasMediaDesired.set(media, mediaMutedDescriptor.get.call(media));
-    }
-    mediaMutedDescriptor.set.call(media, atlasMuted || atlasMediaDesired.get(media));
-  }
-  if (mediaMutedDescriptor.configurable) Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
-    configurable: true, enumerable: mediaMutedDescriptor.enumerable,
-    get: mediaMutedDescriptor.get,
-    set: function(value) {
-      if (!atlasMediaSeen.has(this)) { atlasMediaSeen.add(this); atlasMediaRefs.add(new WeakRef(this)); }
-      atlasMediaDesired.set(this, !!value);
-      mediaMutedDescriptor.set.call(this, atlasMuted || !!value);
-    }
-  });
-  var atlasNativePlay = HTMLMediaElement.prototype.play;
-  HTMLMediaElement.prototype.play = function() { trackAtlasMedia(this); return atlasNativePlay.apply(this, arguments); };
-  if (window.AudioNode) {
-    var atlasNativeConnect = AudioNode.prototype.connect, atlasNativeDisconnect = AudioNode.prototype.disconnect;
-    AudioNode.prototype.connect = function(destination) {
-      if (destination !== this.context.destination || (window.OfflineAudioContext && this.context instanceof OfflineAudioContext)) return atlasNativeConnect.apply(this, arguments);
-      var gate = atlasAudioGates.get(this.context);
-      if (!gate) {
-        gate = this.context.createGain(); gate.gain.value = atlasMuted ? 0 : 1;
-        atlasNativeConnect.call(gate, destination);
-        atlasAudioGates.set(this.context, gate); atlasAudioGateRefs.add(new WeakRef(gate));
-      }
-      var args = Array.from(arguments); args[0] = gate;
-      atlasNativeConnect.apply(this, args); return destination;
-    };
-    AudioNode.prototype.disconnect = function(destination) {
-      var gate = atlasAudioGates.get(this.context);
-      if (gate && destination === this.context.destination) { var args = Array.from(arguments); args[0] = gate; return atlasNativeDisconnect.apply(this, args); }
-      return atlasNativeDisconnect.apply(this, arguments);
-    };
-  }
-  function applyAtlasMediaState() {
-    document.querySelectorAll('video,audio').forEach(trackAtlasMedia);
-    atlasMediaRefs.forEach(function(ref) {
-      var media = ref.deref(); if (media) trackAtlasMedia(media); else atlasMediaRefs.delete(ref);
-    });
-    atlasAudioGateRefs.forEach(function(ref) {
-      var gate = ref.deref(); if (gate) gate.gain.value = atlasMuted ? 0 : 1; else atlasAudioGateRefs.delete(ref);
-    });
-  }
   window.addEventListener('message', function(e) {
     if (e.source !== window.parent || e.origin !== atlasParentOrigin || !e.data) return;
     if (e.data.type === '__atlas_navigation') {
@@ -783,17 +732,7 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
       if (e.data.action === 'reload') location.reload();
       return;
     }
-    if (e.data.type !== '__atlas_media_state') return;
-    atlasMuted = !!e.data.muted;
-    applyAtlasMediaState();
   });
-  document.addEventListener('play', function(e) {
-    if (e.target && /^(VIDEO|AUDIO)$/.test(e.target.tagName)) trackAtlasMedia(e.target);
-  }, true);
-  new MutationObserver(function(changes) {
-    if (changes.some(function(change) { return change.addedNodes.length > 0; })) applyAtlasMediaState();
-  }).observe(document.documentElement, { childList: true, subtree: true });
-  window.parent.postMessage({ type: '__atlas_media_ready' }, atlasParentOrigin || '*');
 
   var lastAtlasMetadata = '';
   function reportNav() {
@@ -1349,65 +1288,6 @@ async function appHandler(req, res) {
         port: PORT,
       })
     );
-    return;
-  }
-
-  if (reqUrl.pathname === '/api/test-wisp') {
-    const targetWisp =
-      reqUrl.searchParams.get('wisp') || reqUrl.searchParams.get('url') || `ws://localhost:${PORT}/wisp/`;
-    const startTime = Date.now();
-    try {
-      const conn = await getWispConnection(targetWisp);
-      const pingMs = Date.now() - startTime;
-
-      let probeOk = false;
-      try {
-        const stream = conn.create_stream('cloudflare.com', 80);
-        await new Promise(resolve => {
-          const t = setTimeout(() => {
-            try {
-              stream.close();
-            } catch {}
-            resolve();
-          }, 3000);
-          stream.onmessage = () => {
-            clearTimeout(t);
-            probeOk = true;
-            try {
-              stream.close();
-            } catch {}
-            resolve();
-          };
-          stream.send(
-            new TextEncoder().encode(
-              'HEAD /cdn-cgi/trace HTTP/1.1\r\nHost: cloudflare.com\r\nConnection: close\r\n\r\n'
-            )
-          );
-        });
-      } catch {}
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          ok: true,
-          endpoint: targetWisp,
-          latency_ms: pingMs,
-          wisp_version: conn.wisp_version || 2,
-          udp_enabled: !!conn.udp_enabled,
-          motd: conn.server_motd || 'Ready',
-          probe_ok: probeOk,
-        })
-      );
-    } catch (err) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          ok: false,
-          endpoint: targetWisp,
-          error: err.message || 'Failed to connect to Wisp server',
-        })
-      );
-    }
     return;
   }
 
