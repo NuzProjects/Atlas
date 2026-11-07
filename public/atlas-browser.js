@@ -295,7 +295,6 @@ function setAtlasSplitRatio(ratio) {
   atlasSplitRatio = Math.max(25, Math.min(75, ratio));
   viewportContainer.style.setProperty('--atlas-split-position', atlasSplitRatio + '%');
   atlasSplitDivider.setAttribute('aria-valuenow', String(Math.round(atlasSplitRatio)));
-  localStorage.setItem('setting_split_ratio', String(atlasSplitRatio));
   syncAtlasSplitAddress();
 }
 function renderAtlasSplitTabs() {
@@ -471,12 +470,7 @@ function animateAtlasSplitHeaders(phase, before, removeBlank, pane) {
     document.body.append(measureBar);
     measure
       .querySelectorAll('.tab-item')
-      .forEach(item =>
-        item.classList.toggle(
-          'tab-compact',
-          item.getBoundingClientRect().width < 68 && !item.classList.contains('pinned')
-        )
-      );
+      .forEach(item => item.classList.toggle('tab-compact', item.getBoundingClientRect().width < 68));
     widths = before.map(
       ({ element }) =>
         measure.querySelector(`[data-tab-id="${element.dataset.tabId}"]`)?.getBoundingClientRect().width || 0

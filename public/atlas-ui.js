@@ -134,18 +134,6 @@ function hydrateAtlasDropdowns(root = document) {
   });
 }
 
-const LEGACY_CLOAK_PRESETS = {
-  default: { title: 'Atlas', icon: '/assets/atlas.png' },
-  google: { title: 'Google', icon: '/assets/official/google.ico' },
-  classroom: { label: 'Google Classroom', title: 'Home - Classroom', icon: '/assets/classroom.png' },
-  canvas: { label: 'Canvas', title: 'Dashboard', icon: '/assets/canvas.ico' },
-  desmos: { label: 'Desmos', title: 'Desmos | Graphing Calculator', icon: '/assets/official/desmos.ico' },
-  khan: { label: 'Khan Academy', title: 'Dashboard | Khan Academy', icon: '/assets/official/khan-academy.ico' },
-  gmail: { label: 'Gmail', title: 'Inbox (3)', icon: '/assets/official/gmail.ico' },
-  outlook: { title: 'Outlook', icon: '/assets/official/outlook.ico' },
-  wikipedia: { title: 'Wikipedia', icon: '/assets/official/wikipedia.ico' },
-  duolingo: { title: 'Duolingo', icon: '/assets/official/duolingo.ico' },
-};
 const ATLAS_THEMES = {
   charcoal: { label: 'Charcoal', colors: ['#141414', '#1c1c1c', '#363636', '#464646'] },
   graphite: { label: 'Graphite', colors: ['#212121', '#2b2b2b', '#424242', '#505050'] },
@@ -196,29 +184,10 @@ const ATLAS_BACKGROUNDS = {
   },
   none: { label: 'None', image: 'none', size: 'auto' },
 };
-const legacyCloak = LEGACY_CLOAK_PRESETS[localStorage.getItem('setting_tab_cloak')];
-if (localStorage.getItem('setting_custom_title_enabled') === null && legacyCloak) {
-  localStorage.setItem('setting_custom_title_enabled', String(legacyCloak !== LEGACY_CLOAK_PRESETS.default));
-  localStorage.setItem('setting_custom_title', legacyCloak.title);
-  localStorage.setItem('setting_custom_favicon', legacyCloak.icon);
-}
-localStorage.removeItem('setting_tab_cloak');
 let customTitleEnabled = localStorage.getItem('setting_custom_title_enabled') === 'true';
 let customSiteTitle = localStorage.getItem('setting_custom_title') || 'Atlas';
 let customSiteFavicon = localStorage.getItem('setting_custom_favicon') || '/assets/atlas.png';
 
-const retiredIcon = /^\/assets\/cloaks\/([a-z]+)\.(?:png|jpg)(?:\?.*)?$/.exec(customSiteFavicon);
-if (retiredIcon) {
-  customSiteFavicon = LEGACY_CLOAK_PRESETS[retiredIcon[1]]?.icon || '/assets/atlas.png';
-  localStorage.setItem('setting_custom_favicon', customSiteFavicon);
-}
-if (
-  /^\/assets\/atlas\.svg(?:\?v=7)?$/.test(customSiteFavicon) ||
-  /^\/assets\/atlas(?:-favicon)?\.png\?v=\d+$/.test(customSiteFavicon)
-) {
-  customSiteFavicon = '/assets/atlas.png';
-  localStorage.setItem('setting_custom_favicon', customSiteFavicon);
-}
 let autoCloakEnabled = localStorage.getItem('setting_auto_cloak') === 'true';
 let panicKeyEnabled = localStorage.getItem('setting_panic_enabled') === 'true';
 let panicKeyChar = localStorage.getItem('setting_panic_key') || ']';
@@ -340,9 +309,6 @@ function reopenAtlasClosedTab() {
   atlasClosedTabs.pop();
   tabs.splice(tabs.indexOf(restored), 1);
   tabs.splice(Math.min(closed.index, tabs.length), 0, restored);
-  restored.pinned = closed.pinned;
-  restored.muted = closed.muted;
-  applyTabMediaState(restored);
   switchView('browser');
   renderTabs();
 }
@@ -451,9 +417,6 @@ function applyAtlasAppearance() {
     element.style.backgroundImage = background.image;
     element.style.backgroundSize = background.size;
   });
-  document.querySelector('.tab-bar').style.display = 'flex';
-  homeBottomDock.style.zoom = '1';
-  document.querySelector('.nav-buttons').style.zoom = '1';
   let custom = document.getElementById('atlasCustomCSS');
   if (!custom) {
     custom = document.createElement('style');
@@ -847,13 +810,7 @@ function isAtlasStorageKey(key) {
   return (
     key.startsWith('setting_') ||
     key.startsWith('network_shortcuts') ||
-    [
-      'wisp_server_url',
-      'atlas_muted_sites',
-      'atlas_browsing_history',
-      'atlas_tab_sessions',
-      'atlas_current_session',
-    ].includes(key)
+    ['wisp_server_url', 'atlas_browsing_history', 'atlas_tab_sessions', 'atlas_current_session'].includes(key)
   );
 }
 const ATLAS_BOOLEAN_SETTINGS = new Set([
@@ -963,14 +920,6 @@ settingsNavItems.forEach(
     })
 );
 
-function mutedAtlasSites() {
-  try {
-    const sites = JSON.parse(localStorage.getItem('atlas_muted_sites') || '[]');
-    return Array.isArray(sites) ? sites : [];
-  } catch {
-    return [];
-  }
-}
 function applyGlobalProxyPreferences(ads, fingerprints) {
   localStorage.setItem('setting_block_ads', ads);
   localStorage.setItem('setting_block_fp', fingerprints);
@@ -980,23 +929,10 @@ function applyGlobalProxyPreferences(ads, fingerprints) {
     tab.blockAds = ads;
     tab.blockFp = fingerprints;
   });
-  tabs.filter(tab => !tab.isNewTab && !tab.hibernated).forEach(tab => navigateTab(tab.id, tab.url));
+  tabs.filter(tab => !tab.isNewTab).forEach(tab => navigateTab(tab.id, tab.url));
 }
-function applyTabMediaState(tab) {
-  if (tab.isNewTab || tab.hibernated || !tab.iframe?.contentWindow) return;
-  const muted = Boolean(tab.muted || mutedAtlasSites().includes(getHostname(tab.url)));
-  const origin = new URL(tab.iframe.src || atlasAppOrigin(), atlasAppOrigin()).origin;
-  if (origin === 'null') return;
-  AtlasEngines.post(tab.iframe, { type: '__atlas_media_state', muted }, origin);
-}
-window.addEventListener('message', event => {
-  if (event.data?.type !== '__atlas_media_ready') return;
-  const tab = tabs.find(tab => tab.iframe?.contentWindow === event.source);
-  if (tab && event.origin === new URL(tab.iframe.src, atlasAppOrigin()).origin) applyTabMediaState(tab);
-});
 function reloadAtlasTab(tab) {
   if (!tab || tab.isNewTab) return;
-  tab.hibernated = false;
   navigateTab(tab.id, tab.url);
 }
 

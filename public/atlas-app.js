@@ -78,20 +78,17 @@ const siteInfoHeader = document.getElementById('siteInfoHeader');
 const siteInfoBackBtn = document.getElementById('siteInfoBackBtn');
 const siteInfoTitleMain = document.getElementById('siteInfoTitleMain');
 const siteInfoDomain = document.getElementById('siteInfoDomain');
-const closeSiteInfoBtn = document.getElementById('closeSiteInfoBtn');
 const siteInfoMenu = document.querySelector('.site-info-menu');
 const siteInfoCookiesSubview = document.getElementById('siteInfoCookiesSubview');
 const siteInfoSecurityRow = document.getElementById('siteInfoSecurityRow');
 const siteInfoSecurityDesc = document.getElementById('siteInfoSecurityDesc');
 const siteInfoFingerprintRow = document.getElementById('siteInfoFingerprintRow');
 const siteInfoFingerprintDesc = document.getElementById('siteInfoFingerprintDesc');
-const fingerprintBadge = document.getElementById('fingerprintBadge');
 const siteInfoCookiesRow = document.getElementById('siteInfoCookiesRow');
 const manageSiteDataRow = document.getElementById('manageSiteDataRow');
 const openOnDeviceDataBtn = document.getElementById('openOnDeviceDataBtn');
 const siteInfoOnDeviceSubview = document.getElementById('siteInfoOnDeviceSubview');
 const onDeviceList = document.getElementById('onDeviceList');
-const onDeviceManageLink = document.getElementById('onDeviceManageLink');
 const thirdPartyCookieToggle = document.getElementById('thirdPartyCookieToggle');
 const thirdPartyCookieStatus = document.getElementById('thirdPartyCookieStatus');
 const siteDataAllowedText = document.getElementById('siteDataAllowedText');
@@ -129,21 +126,6 @@ function getHostname(rawUrl) {
     return u.hostname.replace(/^www\./, '').toLowerCase();
   } catch {
     return '';
-  }
-}
-
-function normalizeUrl(raw) {
-  if (!raw) return '';
-  try {
-    const u = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
-    return (u.hostname.replace(/^www\./, '') + u.pathname).replace(/\/$/, '').toLowerCase();
-  } catch {
-    return raw
-      .trim()
-      .replace(/^https?:\/\//, '')
-      .replace(/^www\./, '')
-      .replace(/\/$/, '')
-      .toLowerCase();
   }
 }
 
@@ -230,7 +212,6 @@ function updateNewTabBtnState() {
 }
 
 let isDraggingTab = false;
-let draggedTabId = null;
 
 function renderTabs() {
   if (isDraggingTab) return;
@@ -243,9 +224,6 @@ function renderTabs() {
     item.classList.toggle('opening', Boolean(tab.isJustOpened));
     item.classList.toggle('closing', Boolean(tab.isClosing));
     item.setAttribute('data-tab-id', tab.id);
-    item.classList.toggle('pinned', Boolean(tab.pinned));
-    item.classList.toggle('muted', Boolean(tab.muted || mutedAtlasSites().includes(getHostname(tab.url))));
-    item.classList.toggle('hibernated', Boolean(tab.hibernated));
     item.oncontextmenu = e => e.preventDefault();
     item.setAttribute('role', 'tab');
     item.setAttribute('aria-label', tab.title || 'New Tab');
@@ -358,7 +336,7 @@ function updateTabSizing() {
   tabElements.forEach(el => {
     if (el.classList.contains('opening') || el.classList.contains('closing')) return;
     const width = el.getBoundingClientRect().width;
-    if (width > 0) el.classList.toggle('tab-compact', width < 68 && !el.classList.contains('pinned'));
+    if (width > 0) el.classList.toggle('tab-compact', width < 68);
   });
 }
 
@@ -409,7 +387,6 @@ function createTab(initialUrl = '/new-tab', initialTitle = null, animateOpen = t
       loadedTab.documentReadyRevision = (loadedTab.documentReadyRevision || 0) + 1;
     }
     if (activeTabId === tabId) hideLoader();
-    if (loadedTab && !loadedTab.isNewTab) applyTabMediaState(loadedTab);
     try {
       const doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
       if (loadedTab && doc) loadedTab.isErrorPage = !!doc.querySelector('meta[name="atlas-error-page"]');
@@ -495,10 +472,6 @@ function activateTab(tabId) {
     newTabScreen.scrollTop = 0;
   }
   closeAtlasMenu();
-  if (currentTab.hibernated) {
-    currentTab.hibernated = false;
-    navigateTab(tabId, currentTab.url);
-  }
 
   if (currentTab.isLoading) showLoader();
   else hideLoader();
@@ -584,8 +557,6 @@ function closeTab(tabId, animateClose = true) {
   atlasClosedTabs.push({
     url: tab.url,
     title: tab.title,
-    pinned: Boolean(tab.pinned),
-    muted: Boolean(tab.muted),
     index,
   });
   if (atlasClosedTabs.length > 30) atlasClosedTabs.shift();
@@ -671,27 +642,8 @@ function atlasNavigateHistory(tab, direction) {
   }
   return true;
 }
-async function atlasControlNavigation(tab, action, url) {
-  const previous = tab.iframe.contentDocument,
-    ready = tab.documentReadyRevision || 0;
-  if (action === 'back' || action === 'forward') {
-    if (!atlasNavigateHistory(tab, action))
-      throw Error(
-        action === 'back' ? 'No previous page is available in this tab.' : 'No forward page is available in this tab.'
-      );
-  } else navigateTab(tab.id, url || tab.url);
-  const deadline = Date.now() + 20000;
-  while (Date.now() < deadline) {
-    if (tab.isClosing || activeTabId !== tab.id) throw Error('The active tab changed during navigation.');
-    if ((tab.iframe.contentDocument !== previous || (tab.documentReadyRevision || 0) > ready) && !tab.isLoading)
-      return { url: tab.url };
-    await new Promise(resolve => setTimeout(resolve, 80));
-  }
-  throw Error('The requested page did not finish loading. No successful navigation was confirmed.');
-}
 function navigateTab(tabId, rawInput) {
-  const requested = (rawInput || '').trim();
-  const input = /^atlas:\/\/assistant\/?$/i.test(requested) ? 'atlas://new' : requested;
+  const input = (rawInput || '').trim();
   if (!input) return;
 
   const tab = tabs.find(t => t.id === tabId);
@@ -1964,24 +1916,6 @@ blockAdsToggle.checked = localStorage.getItem('setting_block_ads') !== 'false';
 fingerprintToggle.checked = localStorage.getItem('setting_block_fp') !== 'false';
 const siteInfoBlockAdsRow = document.getElementById('siteInfoBlockAdsRow');
 
-function reloadActiveTabProxy() {
-  const currentTab = tabs.find(t => t.id === activeTabId);
-  if (currentTab && atlasInternalPage(currentTab.url)) return;
-  if (currentTab && !currentTab.isNewTab && currentTab.url) {
-    const blockAdsVal = blockAdsToggle ? blockAdsToggle.checked : true;
-    const blockFpVal = fingerprintToggle ? fingerprintToggle.checked : true;
-    currentTab.blockAds = blockAdsVal;
-    currentTab.blockFp = blockFpVal;
-    const targetUrl = currentTab.url;
-    const proxyUrl = atlasProxyAddress(targetUrl, true, blockAdsVal, blockFpVal, activeWss);
-    currentTab.isLoading = true;
-    showLoader();
-    if (currentTab.iframe) {
-      AtlasEngines.navigate(currentTab, targetUrl, proxyUrl, activeWss);
-    }
-  }
-}
-
 if (blockAdsToggle) {
   blockAdsToggle.onchange = () => {
     applyGlobalProxyPreferences(blockAdsToggle.checked, fingerprintToggle.checked);
@@ -2072,13 +2006,6 @@ if (openOnDeviceDataBtn) {
   };
 }
 
-if (onDeviceManageLink) {
-  onDeviceManageLink.onclick = e => {
-    e.stopPropagation();
-    showSiteInfoOnDeviceView();
-  };
-}
-
 renderShortcuts();
 
 navReload.onclick = () => {
@@ -2141,9 +2068,7 @@ window.addEventListener('message', e => {
       )
         return;
       if (
-        ['__network_nav_url', '__network_metadata', '__network_document_ready', '__atlas_content_blocked'].includes(
-          e.data?.type
-        ) &&
+        ['__network_metadata', '__network_document_ready', '__atlas_content_blocked'].includes(e.data?.type) &&
         AtlasProxyOrigin.originFor(e.data.url, window.__atlasConfig.proxyOriginTemplate) !== e.origin
       )
         return;
@@ -2228,69 +2153,6 @@ window.addEventListener('message', e => {
         matchedTab.iframe.src = u.toString();
       } catch {
         matchedTab.iframe.src = currentSrc;
-      }
-    }
-  }
-
-  if (e.data && e.data.type === '__network_doc_title' && e.data.title) {
-    const cleanTitle = e.data.title.trim();
-    if (cleanTitle) {
-      const matchedTab = tabs.find(t => t.iframe && t.iframe.contentWindow === e.source);
-      if (matchedTab && matchedTab.title !== cleanTitle) {
-        matchedTab.title = cleanTitle;
-        renderTabs();
-        if (matchedTab.id === activeTabId) {
-          updateBookmarkStar();
-          updateSiteInfo();
-        }
-      }
-    }
-  }
-
-  if (e.data?.type === '__network_favicon' && typeof e.data.icon === 'string') {
-    try {
-      const tab = tabs.find(t => t.iframe?.contentWindow === e.source);
-      const icon = new URL(e.data.icon);
-      if (
-        tab &&
-        tab.url === e.data.url &&
-        ['http:', 'https:'].includes(icon.protocol) &&
-        atlasSiteFavicons.get(tab.url) !== icon.href
-      ) {
-        atlasSiteFavicons.set(tab.url, icon.href);
-        if (atlasSiteFavicons.size > 200) atlasSiteFavicons.delete(atlasSiteFavicons.keys().next().value);
-        tab.favicon = icon.href;
-        renderTabs();
-      }
-    } catch {}
-  }
-
-  if (e.data && e.data.type === '__network_nav_url' && e.data.url) {
-    const cleanUrl = e.data.url.trim();
-    if (cleanUrl) {
-      const matchedTab = tabs.find(t => t.iframe && t.iframe.contentWindow === e.source);
-      if (matchedTab && !matchedTab.isNewTab) {
-        if (
-          matchedTab.navigationLoading &&
-          matchedTab.iframe.contentDocument &&
-          matchedTab.iframe.contentDocument.documentElement?.getAttribute('data-atlas-url') !== cleanUrl
-        )
-          return;
-        atlasRememberNavigation(matchedTab, cleanUrl, matchedTab.navigationLoading);
-        matchedTab.navigationLoading = false;
-        matchedTab.navigationPreviousDocument = null;
-        const changedUrl = matchedTab.url !== cleanUrl;
-        matchedTab.url = cleanUrl;
-        if (changedUrl) {
-          matchedTab.title = getRealSiteTitle(cleanUrl);
-          renderTabs();
-        }
-        if (changedUrl && typeof recordAtlasVisit === 'function') recordAtlasVisit(matchedTab);
-        if (matchedTab.id === activeTabId) {
-          bottomAddressBar.value = cleanUrl;
-          updateBookmarkStar();
-          updateSiteInfo();
-        }
       }
     }
   }

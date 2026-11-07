@@ -5,8 +5,7 @@
   #settingsSearchInput,
   .settings-cards-container input:not([type='checkbox']):not([type='radio']):not([type='file']),
   .settings-cards-container textarea,
-  #addShortcutModal input,
-  #wssModal input {
+  #addShortcutModal input {
     font-size: 16px;
   }
 
