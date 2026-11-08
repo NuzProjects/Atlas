@@ -30,6 +30,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { buildInfo } from './proxy-build.mjs';
 import { createProxyEngines } from './proxy-engines.mjs';
 import { createDefaultRelayGateway } from './default-relay.mjs';
+import { clientKey, createLimiter } from './proxy-ratelimit.mjs';
 
 import { server as wisp } from '../src/index.mjs';
 import * as logging from '../src/logging.mjs';
@@ -47,6 +48,9 @@ const contentFilterScript = await fs.readFile(path.join(__dirname, 'public', 'at
 const deployment = deploymentConfig();
 const defaultRelayUpgrade = createDefaultRelayGateway(deployment.localWisp);
 const requestContext = new AsyncLocalStorage();
+const limiter = createLimiter();
+const bufferBudget = (Number.parseInt(process.env.ATLAS_BUFFER_BUDGET_MB, 10) || 96) * 1024 * 1024;
+let bufferedBytes = 0;
 Object.defineProperty(deployment, 'requestOrigin', {
   get: () => requestContext.getStore()?.origin || deployment.publicOrigin,
 });
@@ -263,21 +267,36 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
           }
           const chunks = [];
           let bytes = 0;
+          let held = true;
+          const releaseBuffer = () => {
+            if (!held) return;
+            held = false;
+            bufferedBytes -= bytes;
+          };
           responseBody.on('data', c => {
             bytes += c.length;
+            bufferedBytes += c.length;
             if (bytes > 32 * 1024 * 1024) {
               req.destroy(new Error('Upstream response exceeds 32 MiB limit'));
+              return;
+            }
+            if (bufferedBytes > bufferBudget) {
+              req.destroy(new Error('Atlas is busy; please retry in a moment'));
               return;
             }
             chunks.push(c);
           });
           res.on('aborted', () => req.destroy(new Error('Upstream response was interrupted')));
+          req.once('close', releaseBuffer);
+          responseBody.on('close', releaseBuffer);
           responseBody.on('error', error => {
+            releaseBuffer();
             clearTimeout(timer);
             req.destroy();
             reject(error);
           });
           responseBody.on('end', () => {
+            releaseBuffer();
             clearTimeout(timer);
             const rawBuffer = Buffer.concat(chunks);
             resolve({
@@ -1073,6 +1092,18 @@ async function appHandler(req, res) {
     res.end('Unknown Atlas host');
     return;
   }
+  const limitKind =
+    reqUrl.pathname === '/api/suggestions'
+      ? 'suggestions'
+      : (reqUrl.pathname.startsWith('/api/') && reqUrl.pathname !== '/api/status') ||
+          ['/view', '/resource'].includes(reqUrl.pathname)
+        ? 'requests'
+        : null;
+  if (limitKind && !limiter.allowRequest(clientKey(req), limitKind)) {
+    res.writeHead(429, { 'Content-Type': 'text/plain', 'Retry-After': '60', 'Cache-Control': 'no-store' });
+    res.end('Too many requests. Please wait a minute and try again.');
+    return;
+  }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
@@ -1865,12 +1896,19 @@ const handleRequest = (req, res) =>
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('Atlas request failed. Please retry.');
     });
-const server = http.createServer({ maxHeaderSize: 1024 * 1024 }, handleRequest);
-server.on('upgrade', (req, socket, head) => {
+function limitedUpgrade(req, socket, head) {
+  const release = limiter.openSocket(clientKey(req));
+  if (!release) {
+    socket.end('HTTP/1.1 429 Too Many Requests\r\nRetry-After: 30\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+    return;
+  }
+  socket.once('close', release);
   requestContext
     .run({ origin: requestOrigin(req) }, () => routeAtlasUpgrade(req, socket, head))
     .catch(() => socket.destroy());
-});
+}
+const server = http.createServer({ maxHeaderSize: 1024 * 1024 }, handleRequest);
+server.on('upgrade', limitedUpgrade);
 
 server.listen(PORT, deployment.host, () => {
   console.log(`\n======================================================`);
@@ -1881,11 +1919,7 @@ server.listen(PORT, deployment.host, () => {
 });
 
 const fallbackServer = http.createServer({ maxHeaderSize: 1024 * 1024 }, handleRequest);
-fallbackServer.on('upgrade', (req, socket, head) => {
-  requestContext
-    .run({ origin: requestOrigin(req) }, () => routeAtlasUpgrade(req, socket, head))
-    .catch(() => socket.destroy());
-});
+fallbackServer.on('upgrade', limitedUpgrade);
 if (deployment.mirror)
   fallbackServer
     .listen(8081, '127.0.0.1', () => {

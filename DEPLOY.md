@@ -68,6 +68,21 @@ npm start
 
 Open **http://localhost:8080**. For public access, set `PUBLIC_ORIGIN` to your HTTPS origin and put a WebSocket-capable HTTPS reverse proxy in front of port **8080**. Keep `.cache` writable and persistent. The Node server includes Wisp at **`/wisp/`**; no separate Wisp process is needed.
 
+## Limits
+
+Atlas limits how much each visitor can use so one person or script cannot exhaust your server. The defaults are generous enough for many people sharing one network, such as a school. To change them, add any of these to `.env` (Docker users also add them under `environment:` in `compose.yaml`):
+
+| Variable | Default | What it limits |
+| --- | --- | --- |
+| `ATLAS_SOCKETS_PER_CLIENT` | 200 | Open relay connections per visitor |
+| `ATLAS_SOCKETS_TOTAL` | 1000 | Open relay connections in total |
+| `ATLAS_SOCKET_OPENS_PER_MINUTE` | 300 | New relay connections per visitor per minute |
+| `ATLAS_REQUESTS_PER_MINUTE` | 3000 | API and page requests per visitor per minute |
+| `ATLAS_SUGGESTIONS_PER_MINUTE` | 1200 | Search suggestions per visitor per minute |
+| `ATLAS_BUFFER_BUDGET_MB` | 96 | Memory used for pages being processed at once |
+
+Visitors over a limit get an HTTP 429 response and can retry shortly. Behind Caddy or Cloudflare, Atlas uses the visitor's real address.
+
 ## Build from source
 
 You need **Node.js 24** (the version in `.nvmrc`) and Git.

@@ -228,7 +228,9 @@ function renderTabs() {
     item.setAttribute('role', 'tab');
     item.setAttribute('aria-label', tab.title || 'New Tab');
     item.setAttribute('aria-selected', String(tab.id === activeTabId));
+    item.setAttribute('aria-keyshortcuts', 'Delete');
     item.tabIndex = 0;
+    if (tab.iframe) tab.iframe.setAttribute('aria-label', tab.title || 'New Tab');
     item.onkeydown = e => {
       if (e.target !== item) return;
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
@@ -238,6 +240,10 @@ function renderTabs() {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         activateTab(tab.id);
+      }
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        closeTab(tab.id);
       }
     };
 
@@ -288,16 +294,7 @@ function renderTabs() {
 
     const closeBtn = item.querySelector('.tab-close') || document.createElement('div');
     closeBtn.className = 'tab-close';
-    closeBtn.setAttribute('role', 'button');
-    closeBtn.setAttribute('aria-label', `Close ${tab.title || 'New Tab'}`);
-    closeBtn.tabIndex = 0;
-    closeBtn.onkeydown = e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        e.stopPropagation();
-        closeTab(tab.id);
-      }
-    };
+    closeBtn.setAttribute('aria-hidden', 'true');
     closeBtn.innerHTML = `<svg data-icon="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>`;
     closeBtn.onclick = e => {
       e.stopPropagation();
@@ -1454,19 +1451,52 @@ function renderShortcuts() {
   return Promise.all(animations);
 }
 
+let addShortcutReturnFocus = null;
+function addShortcutFocusables() {
+  return [...addShortcutModal.querySelectorAll('input, button')].filter(element => !element.disabled);
+}
+function keepAddShortcutFocus(e) {
+  if (addShortcutModal.classList.contains('active') && !addShortcutModal.contains(e.target)) shortcutNameInput.focus();
+}
+function handleAddShortcutKeys(e) {
+  if (!addShortcutModal.classList.contains('active')) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeAddShortcutModal();
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const focusables = addShortcutFocusables();
+  const index = focusables.indexOf(document.activeElement);
+  const next = e.shiftKey
+    ? focusables[(index <= 0 ? focusables.length : index) - 1]
+    : focusables[(index + 1) % focusables.length];
+  e.preventDefault();
+  next.focus();
+}
+
 function openAddShortcutModal() {
   if (shortcuts.length >= MAX_SHORTCUTS) return;
   shortcutNameInput.value = '';
   shortcutUrlInput.value = '';
+  addShortcutReturnFocus = document.activeElement;
   addShortcutModal.classList.add('active');
-  requestAnimationFrame(() => {
-    if (addShortcutModal.classList.contains('active') && !addShortcutModal.contains(document.activeElement))
-      shortcutNameInput.focus();
-  });
+  document.addEventListener('focusin', keepAddShortcutFocus, true);
+  document.addEventListener('keydown', handleAddShortcutKeys, true);
+  const focusName = (attempt = 0) => {
+    if (!addShortcutModal.classList.contains('active') || addShortcutModal.contains(document.activeElement)) return;
+    shortcutNameInput.focus();
+    if (document.activeElement !== shortcutNameInput && attempt < 10) setTimeout(() => focusName(attempt + 1), 30);
+  };
+  requestAnimationFrame(() => focusName());
 }
 
 function closeAddShortcutModal() {
   addShortcutModal.classList.remove('active');
+  document.removeEventListener('focusin', keepAddShortcutFocus, true);
+  document.removeEventListener('keydown', handleAddShortcutKeys, true);
+  if (addShortcutReturnFocus?.isConnected) addShortcutReturnFocus.focus({ preventScroll: true });
+  addShortcutReturnFocus = null;
 }
 
 function submitAddShortcut() {
@@ -1516,12 +1546,10 @@ addShortcutModal.onclick = e => {
 
 shortcutUrlInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') submitAddShortcut();
-  if (e.key === 'Escape') closeAddShortcutModal();
 });
 
 shortcutNameInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') submitAddShortcut();
-  if (e.key === 'Escape') closeAddShortcutModal();
 });
 
 function updateBookmarkStar() {
@@ -1845,6 +1873,13 @@ function openSiteInfo() {
   if (siteInfoPopup) siteInfoPopup.classList.add('active');
   if (siteInfoBackdrop) siteInfoBackdrop.classList.add('active');
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !siteInfoPopup?.classList.contains('active')) return;
+  e.preventDefault();
+  closeSiteInfo();
+  siteInfoBtn?.focus({ preventScroll: true });
+});
 
 if (siteInfoBtn && siteInfoPopup) {
   siteInfoBtn.onclick = e => {
