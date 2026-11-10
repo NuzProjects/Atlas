@@ -1,0 +1,47 @@
+.atlas-home-ads {
+  position: absolute;
+  top: 40px;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 16px;
+  z-index: 1;
+}
+.atlas-home-ads[data-side='left'] {
+  left: 24px;
+}
+.atlas-home-ads[data-side='right'] {
+  right: 24px;
+}
+.atlas-home-ads::before {
+  content: 'Advertisement';
+  position: absolute;
+  top: -20px;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+.atlas-home-ad-slot {
+  position: relative;
+  width: 300px;
+  height: 250px;
+  overflow: hidden;
+}
+.atlas-home-ad {
+  display: block;
+  width: 300px;
+  height: 250px;
+  background: transparent;
+}
+.atlas-home-mobile-slot {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+}
+#homeView.atlas-home-has-mobile-ad {
+  overflow-y: auto;
+}
+.atlas-home-has-mobile-ad .home-content {
+  position: relative;
+  top: var(--atlas-mobile-ad-offset, 0px);
+}

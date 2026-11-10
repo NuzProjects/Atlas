@@ -7,6 +7,9 @@ services:
       HOST: 0.0.0.0
       PORT: 8080
       PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-}"
+      ATLAS_AD_ORIGIN: "${ATLAS_AD_ORIGIN:-}"
+      ATLAS_AD_UNITS: "${ATLAS_AD_UNITS:-[]}"
+      ATLAS_AD_VERSION: "${ATLAS_AD_VERSION:-1}"
       ATLAS_CONTENT_MODE: shared
       WISP_ALLOW_PRIVATE_IPS: "false"
       ENABLE_IPV4_MIRROR: "false"

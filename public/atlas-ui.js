@@ -449,14 +449,35 @@ function bindAtlasAppearance(id, storageKey) {
   };
 }
 function filterAtlasSettings() {
-  const query = settingsSearchInput.value.toLowerCase().trim();
+  const query = AtlasLabelText.plain(settingsSearchInput.value).toLowerCase().trim();
   settingsCardsContainer.querySelectorAll('.settings-row').forEach(row => {
     row.style.display =
-      !query || row.querySelector('.settings-row-text').textContent.toLowerCase().includes(query) ? 'flex' : 'none';
+      !query || AtlasLabelText.plain(row.querySelector('.settings-row-text').textContent).toLowerCase().includes(query)
+        ? 'flex'
+        : 'none';
   });
 }
 let atlasSettingsTimer;
+let atlasSettingsScrollFrame;
+function scrollAtlasSettingsTop() {
+  cancelAnimationFrame(atlasSettingsScrollFrame);
+  const top = settingsView.scrollTop;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    settingsView.scrollTop = 0;
+    return;
+  }
+  const started = performance.now();
+  const step = time => {
+    const progress = Math.min((time - started) / 240, 1);
+    settingsView.scrollTop = top * Math.pow(1 - progress, 3);
+    if (progress < 1) atlasSettingsScrollFrame = requestAnimationFrame(step);
+  };
+  atlasSettingsScrollFrame = requestAnimationFrame(step);
+}
+for (const event of ['wheel', 'touchstart'])
+  settingsView.addEventListener(event, () => cancelAnimationFrame(atlasSettingsScrollFrame), { passive: true });
 function renderSettingsTab(tab, afterFade = false) {
+  cancelAnimationFrame(atlasSettingsScrollFrame);
   clearTimeout(atlasSettingsTimer);
   settingsNavItems.forEach(button => button.classList.toggle('active', button.dataset.tab === tab));
   if (!afterFade && settingsCardsContainer.children.length && settingsSectionTitle.textContent.toLowerCase() !== tab) {
@@ -671,8 +692,39 @@ function renderSettingsTab(tab, afterFade = false) {
       };
     });
     document.getElementById('settingKeybindReset').onclick = () => {
-      Object.keys(ATLAS_TAB_KEYBINDS).forEach(action => localStorage.removeItem('setting_keybind_' + action));
-      renderSettingsTab('keybinds', true);
+      atlasRecordingTabKeybind = null;
+      Object.keys(ATLAS_TAB_KEYBINDS).forEach(action => {
+        localStorage.removeItem('setting_keybind_' + action);
+        const button = document.getElementById('settingKeybind_' + action);
+        const label = atlasTabKeybind(action) || 'Not set';
+        button.getAnimations().forEach(animation => animation.cancel());
+        if (button.textContent === label || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          button.textContent = label;
+          return;
+        }
+        button
+          .animate(
+            [
+              { opacity: 1, transform: 'translateY(0)' },
+              { opacity: 0, transform: 'translateY(-3px)' },
+            ],
+            { duration: 80, easing: 'ease-out' }
+          )
+          .finished.then(() => {
+            if (!button.isConnected || atlasRecordingTabKeybind === action) return;
+            button.textContent = label;
+            button.animate(
+              [
+                { opacity: 0, transform: 'translateY(3px)' },
+                { opacity: 1, transform: 'translateY(0)' },
+              ],
+              { duration: 120, easing: 'ease-out' }
+            );
+          })
+          .catch(() => {});
+      });
+      document.getElementById('settingKeybindStatus').textContent = 'Default shortcuts restored.';
+      scrollAtlasSettingsTop();
     };
   } else {
     const build = window.__atlasConfig?.build;
@@ -946,9 +998,8 @@ else switchView('home', false);
 
 function openBlankTab() {
   const firefox = /Firefox\//.test(navigator.userAgent);
-  const blank = window.open(firefox ? 'about:blank' : ' ', '_blank');
-  if (!firefox) blank?.stop();
-  return blank;
+  // Use Chromium's initial empty popup without navigating it to about:blank.
+  return window.open(firefox ? 'about:blank' : '', '_blank');
 }
 function writeTab(tab, html) {
   const write = tab.Function(
@@ -974,7 +1025,7 @@ function atlasBlankWrapper(url, origin, token, session) {
   const appUrl = new URL(url);
   appUrl.searchParams.set('atlas_blank', '1');
   const launch = JSON.stringify({ url, token, session }).replace(/</g, '\\u003c');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas</title><script>window.__atlasBlankLaunch=${launch};<\/script><style>${atlasBlankLoadingStyle()}iframe{width:100%;height:100%;border:0;display:block}</style></head><body>${atlasBlankLoading()}<iframe id="atlasBlankApp" title="Atlas" credentialless src="${escapeHtml(appUrl.href)}" allow="fullscreen *" allowfullscreen></iframe><script>
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas</title><script>window.__atlasBlankLaunch=${launch};<\/script><style>${atlasBlankLoadingStyle()}iframe{width:100%;height:100%;border:0;display:block}</style></head><body>${atlasBlankLoading()}<iframe id="atlasBlankApp" title="Atlas" src="${escapeHtml(appUrl.href)}" allow="fullscreen *" allowfullscreen></iframe><script>
     const origin=${JSON.stringify(origin)},token=${JSON.stringify(token)};
     addEventListener('message',event=>{
       const app=document.getElementById('atlasBlankApp').contentDocument?.defaultView;

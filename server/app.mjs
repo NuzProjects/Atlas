@@ -12,6 +12,7 @@ import { createFaviconCache } from './favicon-cache.mjs';
 import { deploymentConfig, isPublicAtlasFile } from './deployment-config.mjs';
 import { decodeResponse } from './proxy-encoding.mjs';
 import { rewriteLocations, rewriteCss } from './proxy-compat.mjs';
+import { installLiveRequests } from './proxy-live-requests.mjs';
 import { installDocumentAddress } from './proxy-document.mjs';
 import { isAdOrTracker, stripTrackerTags } from './proxy-trackers.mjs';
 import WebSocket, { WebSocketServer } from 'ws';
@@ -25,6 +26,7 @@ import {
   responseHeaders,
   siteCookieNames,
 } from './proxy-security.mjs';
+import { createResourceTokens } from './proxy-resource-tokens.mjs';
 import { createUrlCodec, loadUrlKey } from './proxy-url.mjs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { buildInfo } from './proxy-build.mjs';
@@ -335,9 +337,12 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
   });
 }
 
+const resourceToken = createResourceTokens(urlCodec);
+
 function proxyAddress(target, wisp, isNavigation = false, blockAds = true, blockFingerprint = true, descriptor) {
   const kind = isNavigation ? 'document' : 'resource';
-  const token = urlCodec.seal({ url: target, wisp, kind, blockAds, blockFingerprint }, descriptor);
+  const value = { url: target, wisp, kind, blockAds, blockFingerprint };
+  const token = isNavigation ? urlCodec.seal(value, descriptor) : resourceToken(value, descriptor);
   return contentOrigin(target, deployment) + (isNavigation ? '/view' : '/resource') + '?token=' + token;
 }
 function resolveToProxy(
@@ -407,7 +412,7 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
     icons.sort(function(a,b){function score(icon){return icon.sizes?.value==='any'||/svg/i.test(icon.type)?100:/(?:^| )32x32(?: |$)/.test(icon.sizes?.value||'')?90:80;}return score(b)-score(a);});
     window.parent.postMessage({type:'__network_metadata',url:${JSON.stringify(targetUrl).replace(/</g, '\\u003c')},title:title,iconDeclared:!!icons.length,icon:new URL(icons[0]?.getAttribute('href') || '/favicon.ico',base).href},${JSON.stringify((deployment.proxyOriginTemplate ? deployment.publicOrigin : deployment.requestOrigin) || '').replace(/</g, '\\u003c')});
   }catch(_){}})();</script>`;
-  const proxyDescriptor = urlCodec.issue();
+  const proxyDescriptor = resourceToken.descriptor();
   const proxyAddresses = new Map();
   const rewriteUrl = (raw, base, relay, navigation = false, ads = true, fingerprint = true) => {
     let key;
@@ -507,15 +512,9 @@ function rewriteHtmlForProxy(html, targetUrl, wispUrl, blockAds = true, blockFin
     virtualLocation.toString = function() { return targetUrl; };
     Object.defineProperty(window, '__atlasLocationFor', {value:function(object) { return object === window || object === document ? virtualLocation : object.location; }});
     [window, document].forEach(function(object) { Object.defineProperty(object, '__atlasLocation', { get:function() { return virtualLocation; }, set:virtualLocation.assign }); });
-    var NativeWebSocket = window.WebSocket;
-    window.WebSocket = class extends NativeWebSocket {
-      constructor(url, protocols) {
-        var destination = new URL(String(url));
-        var allowed = ['ws:', 'wss:'].includes(destination.protocol);
-        var relay = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/atlas-websocket?token=' + AtlasUrlCrypto.seal({url:destination.href,source:targetUrl,kind:'socket'},proxyDescriptor);
-        super(allowed ? relay : url, protocols);
-      }
-    };
+    (${installLiveRequests.toString()})(window, targetUrl, function(url) { return toProxy(url, false); }, function(url) {
+      return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/atlas-websocket?token=' + AtlasUrlCrypto.seal({url:url,source:targetUrl,kind:'socket'},proxyDescriptor);
+    });
 
   function unwrapProxyUrl(u) {
     if (!u || typeof u !== 'string') return u;
@@ -1677,10 +1676,22 @@ async function appHandler(req, res) {
     if (isAppPage) {
       res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
       res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+      res.setHeader(
+        'Content-Security-Policy',
+        "frame-src 'self' " +
+          (deployment.ads?.origin || '') +
+          ' https: about: blob: data:' +
+          (deployment.production ? '' : ' http:') +
+          "; connect-src 'self' " +
+          (deployment.ads?.origin || '') +
+          ' https: wss: ws:' +
+          (deployment.production ? '' : ' http:')
+      );
       const config = JSON.stringify({
         build: atlasBuild,
         production: deployment.production,
         defaultWisp: (deployment.requestOrigin || reqUrl.origin).replace(/^http/, 'ws') + '/wisp/',
+        ads: deployment.ads,
         publicOrigin: deployment.requestOrigin || reqUrl.origin,
         contentMode: deployment.contentMode,
         proxyOriginTemplate: deployment.proxyOriginTemplate,

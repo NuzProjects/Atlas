@@ -1,7 +1,7 @@
 document.title = 'Atlas';
 
 const defaultLocalWisp = window.__atlasConfig.defaultWisp || atlasAppOrigin().replace(/^http/, 'ws') + '/wisp/';
-if (localStorage.getItem('atlas_wisp_default_version') !== 'atlas-self-hosted-1') {
+if (!localStorage.getItem('atlas_wisp_default_version')) {
   localStorage.removeItem('wisp_server_url');
   localStorage.setItem('atlas_wisp_default_version', 'atlas-self-hosted-1');
 }
