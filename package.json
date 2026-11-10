@@ -49,7 +49,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "icons": "node scripts/build-icons.mjs"
+    "icons": "node scripts/build-icons.mjs",
+    "start:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1",
+    "package:deploy": "node scripts/package-release.mjs"
   },
   "bin": {
     "wisp-js-server": "src/bin/server_cli.mjs"
