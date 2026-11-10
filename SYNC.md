@@ -10,4 +10,4 @@ If both sides change the same shared file differently, the conflicting versions 
 
 Only regular files are synchronized; symlinks and credential-shaped content are rejected.
 
-Successful runs converge both repositories to matching shared-file hashes.
+Successful runs keep matching shared-file hashes.
