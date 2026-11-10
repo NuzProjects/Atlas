@@ -7,3 +7,5 @@ Private pushes trigger immediately. Public updates are picked up by a five-minut
 Private environment files, credentials, workflows, VPS configuration, provider-specific ad files and coordinator code are excluded. No private-repository or VPS credential is stored in this public repository. Public self-hosted defaults remain independent of maintainer services.
 
 If both sides change the same shared file differently, the conflicting versions are preserved and a review PR is opened privately. Resolve and merge that PR to synchronize the reviewed result. Other non-conflicting updates continue syncing. The coordinator never force-pushes or silently overwrites conflicting edits.
+
+Only regular files are synchronized; symlinks and credential-shaped content are rejected.
