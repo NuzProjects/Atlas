@@ -9,3 +9,5 @@ Private environment files, credentials, workflows, VPS configuration, provider-s
 If both sides change the same shared file differently, the conflicting versions are preserved and a review PR is opened privately. Resolve and merge that PR to synchronize the reviewed result. Other non-conflicting updates continue syncing. The coordinator never force-pushes or silently overwrites conflicting edits.
 
 Only regular files are synchronized; symlinks and credential-shaped content are rejected.
+
+Successful runs converge both repositories to matching shared-file hashes.
