@@ -66,6 +66,7 @@ export function upstreamHeaders(req, target, config) {
     'content-type',
     'accept',
     'accept-language',
+    'last-event-id',
     'range',
     'if-none-match',
     'if-modified-since',

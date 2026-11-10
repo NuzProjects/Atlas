@@ -28,7 +28,45 @@ export function deploymentConfig(env = process.env) {
     ['/wisp/', '/default-wisp/'].map(path => origin.replace(/^http/, 'ws') + path)
   );
   const publicWisp = env.PUBLIC_ORIGIN ? `${env.PUBLIC_ORIGIN.replace(/^http/, 'ws').replace(/\/$/, '')}/wisp/` : null;
+  let ads = null;
+  if (env.ATLAS_AD_ORIGIN) {
+    const origin = new URL(env.ATLAS_AD_ORIGIN);
+    if (
+      !['http:', 'https:'].includes(origin.protocol) ||
+      (production && origin.protocol !== 'https:') ||
+      origin.username ||
+      origin.password ||
+      origin.pathname !== '/' ||
+      origin.search ||
+      origin.hash ||
+      publicOrigins.includes(origin.origin)
+    )
+      throw new Error('Ad origin must be a separate HTTP origin (HTTPS in production)');
+    const units = JSON.parse(env.ATLAS_AD_UNITS || '[]');
+    if (
+      !Array.isArray(units) ||
+      !units.length ||
+      units.some(
+        unit =>
+          !unit ||
+          !/^[a-z0-9][a-z0-9_-]{0,63}$/i.test(unit.name) ||
+          !Number.isInteger(unit.width) ||
+          !Number.isInteger(unit.height) ||
+          unit.width < 1 ||
+          unit.height < 1 ||
+          unit.width > 2000 ||
+          unit.height > 2000
+      )
+    )
+      throw new Error('ATLAS_AD_UNITS must contain named units with valid dimensions');
+    ads = {
+      origin: origin.origin,
+      units: units.map(({ name, width, height }) => ({ name, width, height })),
+      version: env.ATLAS_AD_VERSION || '1',
+    };
+  }
   return {
+    ads,
     production,
     port,
     host,
@@ -59,11 +97,14 @@ export function isPublicAtlasFile(pathname) {
   if (
     [
       '/atlas-content-filter.js',
+      '/atlas-label-text.js',
       '/atlas-game-ads.js',
       '/atlas-blocked.html',
       '/atlas-engines.js',
       '/atlas-scramjet-sw.js',
       '/atlas-ultraviolet-sw.js',
+      '/ads.js',
+      '/atlas-home-ads.css',
     ].includes(pathname)
   )
     return true;

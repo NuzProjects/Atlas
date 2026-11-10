@@ -109,3 +109,9 @@ Useful scripts while working on Atlas:
 | `npm run icons` | Regenerates the Lucide icons after adding or renaming one |
 
 To build the Docker image on its own, run `docker build -t atlas .`.
+
+## Optional isolated ads
+
+Ads are disabled by default. To enable your own separate ad origin, set `ATLAS_AD_ORIGIN`, `ATLAS_AD_UNITS` (a JSON array of `{ "name", "width", "height" }` units), and optionally `ATLAS_AD_VERSION` in `.env`. Docker Compose passes these settings to the application. The ad origin must differ from the app origin and use HTTPS in production. Keep provider keys and loader scripts on that origin, not in the main application.
+
+Example: `ATLAS_AD_ORIGIN=https://ads.example.com` and `ATLAS_AD_UNITS=[{"name":"rectangle","width":300,"height":250}]`. The home-page controller uses only the configured origin and unit names. Leaving the origin empty keeps all ads off and makes no requests to a maintainer-hosted ad service.

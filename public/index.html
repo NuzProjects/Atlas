@@ -200,6 +200,7 @@
     </script>
     <script src="/atlas-origin.js"></script>
     <script src="/atlas-url-crypto.js"></script>
+    <script src="/atlas-label-text.js"></script>
     <script src="/atlas-engines.js?v=4"></script>
     <script src="/atlas-game-ads.js"></script>
     <script src="/atlas-content-filter.js?v=1"></script>
@@ -211,49 +212,6 @@
           const launch = window.parent.__atlasBlankLaunch;
           if (launch && new URL(launch.url).origin === window.location.origin && typeof launch.token === 'string') {
             window.__atlasBlankBoot = { url: launch.url, token: launch.token, session: launch.session, embedded: true };
-            const preferences = window.parent.localStorage,
-              storage = window.localStorage;
-            const transportKey = key => String(key).startsWith('bare-mux-');
-            for (let index = 0; index < preferences.length; index++) {
-              const key = preferences.key(index);
-              if (!transportKey(key)) storage.setItem(key, preferences.getItem(key));
-            }
-            const set = (key, value) => {
-              storage.setItem(key, value);
-              if (!transportKey(key)) preferences.setItem(key, value);
-            };
-            const remove = key => {
-              storage.removeItem(key);
-              if (!transportKey(key)) preferences.removeItem(key);
-            };
-            const bridge = new Proxy(storage, {
-              get(target, key) {
-                if (key === 'setItem') return set;
-                if (key === 'removeItem') return remove;
-                if (key === 'clear')
-                  return () => {
-                    storage.clear();
-                    preferences.clear();
-                  };
-                const value = Reflect.get(target, key, target);
-                return typeof value === 'function' ? value.bind(target) : value;
-              },
-              set(target, key, value) {
-                if (typeof key === 'string') {
-                  set(key, value);
-                  return true;
-                }
-                return Reflect.set(target, key, value, target);
-              },
-              deleteProperty(target, key) {
-                if (typeof key === 'string') {
-                  remove(key);
-                  return true;
-                }
-                return Reflect.deleteProperty(target, key);
-              },
-            });
-            Object.defineProperty(window, 'localStorage', { configurable: true, get: () => bridge });
           }
         } catch {}
       }
@@ -316,6 +274,8 @@
     <link rel="stylesheet" href="/atlas-ui.css?v=46" />
     <link rel="stylesheet" href="/atlas-dock.css" />
     <link rel="stylesheet" href="/atlas-mobile.css?v=1" />
+    <link rel="stylesheet" href="/atlas-home-ads.css?v=20261109-mobile4" />
+    <script defer src="/ads.js?v=20261109-mobile4"></script>
     <script defer src="/atlas-tooltips.js"></script>
   </head>
   <body class="grid-bg">

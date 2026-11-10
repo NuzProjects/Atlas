@@ -3865,3 +3865,18 @@ a:focus-visible,
     filter: none;
   }
 }
+
+/* Let the scrolling settings content soften behind the bottom controls. */
+#settingsView::after {
+  content: '';
+  position: fixed;
+  inset: auto 0 0;
+  height: 100px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(transparent, var(--bg-card));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(transparent, #000 80%);
+  mask-image: linear-gradient(transparent, #000 80%);
+}

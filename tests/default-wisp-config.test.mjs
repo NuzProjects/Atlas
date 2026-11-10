@@ -7,6 +7,7 @@ test('production uses only the Atlas default even with a stale relay environment
     NODE_ENV: 'production',
     PORT: '8080',
     PUBLIC_ORIGIN: 'https://atlas.example.com',
+    ATLAS_ADDITIONAL_PUBLIC_ORIGINS: 'https://alias.example.com',
     ATLAS_DEFAULT_WISP_URL: 'wss://retired-relay.example/',
   });
   assert.equal(config.defaultWisp, 'wss://atlas.example.com/wisp/');
