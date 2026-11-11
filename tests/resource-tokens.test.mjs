@@ -5,7 +5,13 @@ import { createResourceTokens } from '../server/proxy-resource-tokens.mjs';
 import { open as openInBrowser } from '../scripts/url-crypto-browser.mjs';
 import { rewriteLocations } from '../server/proxy-compat.mjs';
 
-const resource = url => ({ url, wisp: 'ws://relay.example/wisp/', kind: 'resource', blockAds: true, blockFingerprint: true });
+const resource = url => ({
+  url,
+  wisp: 'ws://relay.example/wisp/',
+  kind: 'resource',
+  blockAds: true,
+  blockFingerprint: true,
+});
 
 test('circular module imports converge on the same encrypted module identities', () => {
   const codec = createUrlCodec(Buffer.alloc(32, 7));
@@ -15,14 +21,18 @@ test('circular module imports converge on the same encrypted module identities',
     'https://site.example/b.js': 'import { a } from "./a.js"; export function b() { return a; }',
   };
   const entry = seal(resource('https://site.example/a.js'), seal.descriptor());
-  const pending = [entry], seen = new Set();
+  const pending = [entry],
+    seen = new Set();
   while (pending.length && seen.size < 10) {
     const token = pending.pop();
     if (seen.has(token)) continue;
     seen.add(token);
     const { url } = codec.open(token);
-    const output = rewriteLocations(modules[url], specifier =>
-      '/resource?token=' + seal(resource(new URL(specifier, url).href), seal.descriptor()), url);
+    const output = rewriteLocations(
+      modules[url],
+      specifier => '/resource?token=' + seal(resource(new URL(specifier, url).href), seal.descriptor()),
+      url
+    );
     for (const match of output.matchAll(/\/resource\?token=([^"']+)/g)) pending.push(match[1]);
   }
   assert.equal(seen.size, 2);
@@ -58,7 +68,6 @@ test('expired addresses refresh and the resource cache stays bounded', () => {
   assert.notEqual(seal(a), refreshed);
 });
 
-
 test('HTML and rewritten dependencies remain decodable by the browser descriptor', () => {
   const codec = createUrlCodec(Buffer.alloc(32, 7));
   const seal = createResourceTokens(codec);
@@ -68,4 +77,18 @@ test('HTML and rewritten dependencies remain decodable by the browser descriptor
   assert.deepEqual(openInBrowser(seal(entry, descriptor), descriptor), entry);
   assert.deepEqual(openInBrowser(seal(dependency), descriptor), dependency);
   assert.equal(seal.descriptor(), descriptor);
+});
+
+test('pages rendered near rotation still get resource addresses that last at least a day', () => {
+  let time = 1800000000000;
+  const now = () => time;
+  const codec = createUrlCodec(Buffer.alloc(32, 7), { now });
+  const seal = createResourceTokens(codec, { now });
+  const first = seal.descriptor();
+  time += 604800000 - 3600000;
+  const renewed = seal.descriptor();
+  assert.notEqual(renewed.id, first.id);
+  assert.ok(renewed.expires - time / 1000 >= 86400);
+  const token = seal(resource('https://site.example/late.js'));
+  assert.ok(Number(token.split('.')[1]) - time / 1000 >= 86400);
 });

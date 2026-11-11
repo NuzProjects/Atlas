@@ -211,7 +211,13 @@
         try {
           const launch = window.parent.__atlasBlankLaunch;
           if (launch && new URL(launch.url).origin === window.location.origin && typeof launch.token === 'string') {
-            window.__atlasBlankBoot = { url: launch.url, token: launch.token, session: launch.session, embedded: true };
+            window.__atlasBlankBoot = {
+              url: launch.url,
+              token: launch.token,
+              session: launch.session,
+              restore: launch.restore,
+              embedded: true,
+            };
           }
         } catch {}
       }
@@ -1190,6 +1196,8 @@
               const status = await fetch(new URL('/api/status', atlasAppOrigin()), { cache: 'no-store' });
               if (!status.ok || (await status.json()).status !== 'online') return;
               if (window.__atlasBlankBoot.session && !restoreAtlasSession(window.__atlasBlankBoot.session)) return;
+              const restore = !window.__atlasBlankBoot.session && readAtlasSession(window.__atlasBlankBoot.restore);
+              if (restore) promptAtlasRestore(restore);
               const launcher = window.__atlasBlankBoot.embedded ? window.parent : window.opener;
               launcher?.postMessage(
                 { type: '__atlas_blank_ready', token: window.__atlasBlankBoot.token },

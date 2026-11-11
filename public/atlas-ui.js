@@ -1021,10 +1021,10 @@ function atlasBlankLoadingStyle() {
     '\\3c '
   );
 }
-function atlasBlankWrapper(url, origin, token, session) {
+function atlasBlankWrapper(url, origin, token, session, restore) {
   const appUrl = new URL(url);
   appUrl.searchParams.set('atlas_blank', '1');
-  const launch = JSON.stringify({ url, token, session }).replace(/</g, '\\u003c');
+  const launch = JSON.stringify({ url, token, session, restore }).replace(/</g, '\\u003c');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas</title><script>window.__atlasBlankLaunch=${launch};<\/script><style>${atlasBlankLoadingStyle()}iframe{width:100%;height:100%;border:0;display:block}</style></head><body>${atlasBlankLoading()}<iframe id="atlasBlankApp" title="Atlas" src="${escapeHtml(appUrl.href)}" allow="fullscreen *" allowfullscreen></iframe><script>
     const origin=${JSON.stringify(origin)},token=${JSON.stringify(token)};
     addEventListener('message',event=>{
@@ -1088,7 +1088,8 @@ async function openAtlasBlank() {
         window.addEventListener('message', onReady);
         timer = setTimeout(() => reject(new Error('Application initialization timed out')), 20000);
       });
-      await writeTab(blank, atlasBlankWrapper(url, atlasAppOrigin(), token, session));
+      const restore = session ? null : typeof atlasPreviousSession === 'undefined' ? null : atlasPreviousSession;
+      await writeTab(blank, atlasBlankWrapper(url, atlasAppOrigin(), token, session, restore));
       await ready;
       if (blank.closed) throw new Error('Blank tab closed');
       sessionStorage.setItem('atlas_blank_started', 'true');
