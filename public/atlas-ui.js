@@ -1074,7 +1074,7 @@ function atlasBlankWrapper(url, origin, token, session, restore) {
   const appUrl = new URL(url);
   appUrl.searchParams.set('atlas_blank', '1');
   const launch = JSON.stringify({ url, token, session, restore }).replace(/</g, '\\u003c');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas</title><script>window.__atlasBlankLaunch=${launch};<\/script><style>${atlasBlankLoadingStyle()}iframe{width:100%;height:100%;border:0;display:block}</style></head><body>${atlasBlankLoading()}<iframe id="atlasBlankApp" title="Atlas" src="${escapeHtml(appUrl.href)}" allow="fullscreen *" allowfullscreen></iframe><script>
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas</title><script>window.__atlasBlankLaunch=${launch};<\/script><style>${atlasBlankLoadingStyle()}iframe{width:100%;height:100%;border:0;display:block}</style></head><body>${atlasBlankLoading()}<iframe id="atlasBlankApp" title="Atlas" credentialless src="${escapeHtml(appUrl.href)}" allow="fullscreen *" allowfullscreen></iframe><script>
     const origin=${JSON.stringify(origin)},token=${JSON.stringify(token)};
     addEventListener('message',event=>{
       const app=document.getElementById('atlasBlankApp').contentDocument?.defaultView;

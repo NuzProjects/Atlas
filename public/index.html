@@ -218,6 +218,49 @@
               restore: launch.restore,
               embedded: true,
             };
+            const preferences = window.parent.localStorage,
+              storage = window.localStorage;
+            const transportKey = key => String(key).startsWith('bare-mux-');
+            for (let index = 0; index < preferences.length; index++) {
+              const key = preferences.key(index);
+              if (!transportKey(key)) storage.setItem(key, preferences.getItem(key));
+            }
+            const set = (key, value) => {
+              storage.setItem(key, value);
+              if (!transportKey(key)) preferences.setItem(key, value);
+            };
+            const remove = key => {
+              storage.removeItem(key);
+              if (!transportKey(key)) preferences.removeItem(key);
+            };
+            const bridge = new Proxy(storage, {
+              get(target, key) {
+                if (key === 'setItem') return set;
+                if (key === 'removeItem') return remove;
+                if (key === 'clear')
+                  return () => {
+                    storage.clear();
+                    preferences.clear();
+                  };
+                const value = Reflect.get(target, key, target);
+                return typeof value === 'function' ? value.bind(target) : value;
+              },
+              set(target, key, value) {
+                if (typeof key === 'string') {
+                  set(key, value);
+                  return true;
+                }
+                return Reflect.set(target, key, value, target);
+              },
+              deleteProperty(target, key) {
+                if (typeof key === 'string') {
+                  remove(key);
+                  return true;
+                }
+                return Reflect.deleteProperty(target, key);
+              },
+            });
+            Object.defineProperty(window, 'localStorage', { configurable: true, get: () => bridge });
           }
         } catch {}
       }
@@ -1277,7 +1320,7 @@
 
     <script src="/atlas-site-permissions.js?v=1"></script>
     <script src="/atlas-app.js?v=2"></script>
-    <script src="/atlas-ui.js?v=34"></script>
+    <script src="/atlas-ui.js?v=35"></script>
     <script src="/atlas-browser.js?v=29"></script>
     <script src="/atlas-sessions.js?v=13"></script>
     <script src="/atlas-internal.js?v=3"></script>
