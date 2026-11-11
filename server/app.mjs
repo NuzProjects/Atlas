@@ -1107,6 +1107,7 @@ async function appHandler(req, res) {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
   if (isolated) res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  else res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   if (await proxyEngines(req, res, reqUrl)) return;
   if (['/view', '/resource'].includes(reqUrl.pathname)) {
     if (reqUrl.searchParams.has('token')) {

@@ -7,6 +7,15 @@
   transform: translateY(-50%);
   z-index: 1;
 }
+.atlas-home-ads[data-side='left'] {
+  left: 16px;
+}
+.atlas-home-ads[data-side='right'] {
+  right: 16px;
+}
+.atlas-settings-ads {
+  position: fixed;
+}
 .atlas-home-ad-slot {
   position: relative;
   width: 300px;
@@ -32,4 +41,61 @@
 .atlas-home-has-mobile-ad .home-content {
   position: relative;
   top: var(--atlas-mobile-ad-offset, 0px);
+}
+.atlas-consent {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(560px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #242424;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%);
+  box-sizing: border-box;
+}
+.atlas-consent p {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.atlas-consent a {
+  color: var(--text);
+}
+.atlas-consent-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.atlas-consent button {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #363636;
+  color: #fff;
+}
+.atlas-consent button[data-consent='accepted'] {
+  background: #fff;
+  color: #111;
+}
+@media (max-width: 560px) {
+  .atlas-consent {
+    flex-direction: column;
+    align-items: stretch;
+    bottom: 84px;
+  }
+  .atlas-consent-actions button {
+    flex: 1;
+  }
 }

@@ -3870,7 +3870,7 @@ a:focus-visible,
 #settingsView::after {
   content: '';
   position: fixed;
-  bottom: 0;
+  bottom: var(--settings-fade-bottom, 0);
   left: var(--settings-fade-left, 0);
   width: var(--settings-fade-width, 100%);
   height: 100px;
@@ -3885,4 +3885,89 @@ a:focus-visible,
 }
 #settingsView.settings-overflowing::after {
   display: block;
+  opacity: var(--settings-fade-opacity, 1);
+}
+
+.atlas-permission-backdrop .modal-card {
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  gap: 0;
+  background: #242424;
+  border-radius: 14px;
+  transform: translateY(8px);
+}
+.atlas-permission-backdrop.active .modal-card {
+  transform: none;
+}
+.atlas-permission-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.atlas-permission-text {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.atlas-permission-actions {
+  display: flex;
+  gap: 8px;
+}
+.atlas-permission-actions .modal-btn {
+  flex: 1;
+  height: 38px;
+  background: #fff !important;
+  color: #111 !important;
+}
+.atlas-permission-actions .atlas-permission-block {
+  background: #363636 !important;
+  color: #fff !important;
+}
+.settings-link-btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.atlas-terms-backdrop {
+  z-index: 200;
+}
+.atlas-terms-backdrop .modal-card {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  gap: 0;
+  background: #242424;
+  border-radius: 16px;
+  outline: none;
+}
+.atlas-terms-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.atlas-terms-text {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.atlas-terms-text a {
+  color: var(--text);
+}
+.atlas-terms-agree {
+  width: 100%;
+  height: 40px;
+  background: #fff !important;
+  color: #111 !important;
+}
+.atlas-terms-agree:disabled {
+  background: #363636 !important;
+  color: #9a9a9a !important;
+  cursor: not-allowed;
 }

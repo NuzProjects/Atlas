@@ -356,7 +356,7 @@ function createTab(initialUrl = '/new-tab', initialTitle = null, animateOpen = t
     'sandbox',
     'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals allow-pointer-lock'
   );
-  iframe.setAttribute('allow', 'fullscreen *');
+  iframe.setAttribute('allow', AtlasSitePermissions.allowFor(targetUrl));
   iframe.setAttribute('allowfullscreen', '');
   iframe.id = 'frame_' + tabId;
   iframe.style.display = 'none';
@@ -378,7 +378,17 @@ function createTab(initialUrl = '/new-tab', initialTitle = null, animateOpen = t
       atlasSiteFavicons.set(loadedTab.url, engineMetadata.icon);
       atlasRememberNavigation(loadedTab, loadedTab.url, loadedTab.navigationLoading);
       loadedTab.navigationLoading = false;
+      if (AtlasSitePermissions.apply(iframe, loadedTab.url)) {
+        iframe.contentWindow.location.reload();
+        return;
+      }
     }
+    if (loadedTab && !loadedTab.isNewTab)
+      AtlasSitePermissions.watch(
+        iframe,
+        () => loadedTab.url,
+        () => reloadAtlasTabWithPermissions(loadedTab)
+      );
     if (loadedTab) {
       loadedTab.isLoading = false;
       loadedTab.documentReadyRevision = (loadedTab.documentReadyRevision || 0) + 1;
@@ -639,6 +649,15 @@ function atlasNavigateHistory(tab, direction) {
   }
   return true;
 }
+let atlasPersistentStorageRequested = false;
+function requestAtlasPersistentStorage() {
+  if (atlasPersistentStorageRequested || !navigator.storage?.persist) return;
+  atlasPersistentStorageRequested = true;
+  navigator.storage
+    .persisted()
+    .then(persisted => persisted || navigator.storage.persist())
+    .catch(() => {});
+}
 function navigateTab(tabId, rawInput) {
   const input = (rawInput || '').trim();
   if (!input) return;
@@ -734,6 +753,8 @@ function navigateTab(tabId, rawInput) {
   tab.blockFp = localStorage.getItem('setting_block_fp') !== 'false';
 
   const proxyUrl = atlasProxyAddress(finalUrl, true, tab.blockAds, tab.blockFp, activeWss);
+  AtlasSitePermissions.apply(tab.iframe, finalUrl);
+  requestAtlasPersistentStorage();
   AtlasEngines.navigate(tab, finalUrl, proxyUrl, activeWss);
   if (typeof applyAtlasSplitLayout === 'function') applyAtlasSplitLayout();
 }
@@ -1851,6 +1872,50 @@ function updateSiteInfo() {
       fingerprintToggle.checked = currentTab.blockFp;
     }
   }
+  const permissionSite = currentTab && !currentTab.isNewTab ? AtlasSitePermissions.site(currentTab.url) : null;
+  const grants = permissionSite ? AtlasSitePermissions.get(currentTab.url) : { media: false, location: false };
+  for (const [id, kind] of [
+    ['sitePermissionMediaToggle', 'media'],
+    ['sitePermissionLocationToggle', 'location'],
+  ]) {
+    const toggle = document.getElementById(id);
+    if (!toggle) continue;
+    toggle.checked = grants[kind];
+    toggle.disabled = !permissionSite;
+  }
+}
+
+function reloadAtlasTabWithPermissions(tab) {
+  if (!tab?.iframe || tab.isNewTab) return;
+  AtlasSitePermissions.apply(tab.iframe, tab.url);
+  try {
+    tab.iframe.contentWindow.location.reload();
+  } catch {
+    navigateTab(tab.id, tab.url);
+  }
+}
+for (const [id, kind] of [
+  ['sitePermissionMediaToggle', 'media'],
+  ['sitePermissionLocationToggle', 'location'],
+]) {
+  const toggle = document.getElementById(id);
+  if (!toggle) continue;
+  toggle.onchange = () => {
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (!tab || tab.isNewTab) return;
+    AtlasSitePermissions.set(tab.url, kind, toggle.checked);
+    reloadAtlasTabWithPermissions(tab);
+  };
+}
+for (const id of ['siteInfoMediaRow', 'siteInfoLocationRow']) {
+  const row = document.getElementById(id);
+  if (!row) continue;
+  row.onclick = e => {
+    if (e.target.closest('.clean-switch')) return;
+    const isExpanded = row.classList.contains('expanded');
+    collapseAllSiteInfoExpanded(row);
+    row.classList.toggle('expanded', !isExpanded);
+  };
 }
 
 const siteInfoBackdrop = document.getElementById('siteInfoBackdrop');
@@ -1926,15 +1991,9 @@ if (siteInfoBtn && siteInfoPopup) {
 }
 
 function collapseAllSiteInfoExpanded(exceptEl = null) {
-  if (siteInfoBlockAdsRow && siteInfoBlockAdsRow !== exceptEl) {
-    siteInfoBlockAdsRow.classList.remove('expanded');
-  }
-  if (siteInfoFingerprintRow && siteInfoFingerprintRow !== exceptEl) {
-    siteInfoFingerprintRow.classList.remove('expanded');
-  }
-  if (siteInfoSecurityRow && siteInfoSecurityRow !== exceptEl) {
-    siteInfoSecurityRow.classList.remove('expanded');
-  }
+  siteInfoPopup?.querySelectorAll('.site-info-item.expanded').forEach(row => {
+    if (row !== exceptEl) row.classList.remove('expanded');
+  });
 }
 
 if (siteInfoSecurityRow) {

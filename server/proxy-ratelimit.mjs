@@ -70,11 +70,11 @@ function positive(value, fallback) {
 
 export function limitSettings(env = process.env) {
   return {
-    socketsPerClient: positive(env.ATLAS_SOCKETS_PER_CLIENT, 200),
+    socketsPerClient: positive(env.ATLAS_SOCKETS_PER_CLIENT, 600),
     socketsTotal: positive(env.ATLAS_SOCKETS_TOTAL, 1000),
-    socketOpensPerMinute: positive(env.ATLAS_SOCKET_OPENS_PER_MINUTE, 300),
-    requestsPerMinute: positive(env.ATLAS_REQUESTS_PER_MINUTE, 3000),
-    suggestionsPerMinute: positive(env.ATLAS_SUGGESTIONS_PER_MINUTE, 1200),
+    socketOpensPerMinute: positive(env.ATLAS_SOCKET_OPENS_PER_MINUTE, 1200),
+    requestsPerMinute: positive(env.ATLAS_REQUESTS_PER_MINUTE, 12000),
+    suggestionsPerMinute: positive(env.ATLAS_SUGGESTIONS_PER_MINUTE, 4800),
   };
 }
 

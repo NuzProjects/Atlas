@@ -74,14 +74,16 @@ Atlas limits how much each visitor can use so one person or script cannot exhaus
 
 | Variable | Default | What it limits |
 | --- | --- | --- |
-| `ATLAS_SOCKETS_PER_CLIENT` | 200 | Open relay connections per visitor |
+| `ATLAS_SOCKETS_PER_CLIENT` | 600 | Open relay connections per visitor |
 | `ATLAS_SOCKETS_TOTAL` | 1000 | Open relay connections in total |
-| `ATLAS_SOCKET_OPENS_PER_MINUTE` | 300 | New relay connections per visitor per minute |
-| `ATLAS_REQUESTS_PER_MINUTE` | 3000 | API and page requests per visitor per minute |
-| `ATLAS_SUGGESTIONS_PER_MINUTE` | 1200 | Search suggestions per visitor per minute |
+| `ATLAS_SOCKET_OPENS_PER_MINUTE` | 1200 | New relay connections per visitor per minute |
+| `ATLAS_REQUESTS_PER_MINUTE` | 12000 | API and page requests per visitor per minute |
+| `ATLAS_SUGGESTIONS_PER_MINUTE` | 4800 | Search suggestions per visitor per minute |
 | `ATLAS_BUFFER_BUDGET_MB` | 96 | Memory used for pages being processed at once |
 
-Visitors over a limit get an HTTP 429 response and can retry shortly. Behind Caddy or Cloudflare, Atlas uses the visitor's real address.
+Visitors over a limit get an HTTP 429 response and can retry shortly. Behind Caddy or Cloudflare, Atlas uses the visitor's real address. Limits are per address, so a school or office sharing one public address shares one allowance; the defaults leave room for a full classroom.
+
+Each relay connection can carry many site connections, so give the service enough open files (`LimitNOFILE=65536` in `deploy/atlas.service`) before raising `ATLAS_SOCKETS_TOTAL`.
 
 ## Build from source
 

@@ -478,13 +478,18 @@ for (const event of ['wheel', 'touchstart'])
   settingsView.addEventListener(event, () => cancelAnimationFrame(atlasSettingsScrollFrame), { passive: true });
 function fitAtlasSettingsFade() {
   const box = settingsCardsContainer.getBoundingClientRect();
-  settingsView.style.setProperty('--settings-fade-left', box.left + 'px');
-  settingsView.style.setProperty('--settings-fade-width', box.width + 'px');
+  const hidden = settingsView.scrollHeight - settingsView.scrollTop - settingsView.clientHeight;
+  const root = document.documentElement.style;
+  root.setProperty('--settings-fade-left', box.left + 'px');
+  root.setProperty('--settings-fade-width', box.width + 'px');
+  root.setProperty('--settings-fade-bottom', Math.max(0, innerHeight - box.bottom) + 'px');
+  root.setProperty('--settings-fade-opacity', String(Math.max(0, Math.min(1, hidden / 80))));
   settingsView.classList.toggle('settings-overflowing', settingsView.scrollHeight > settingsView.clientHeight + 1);
 }
 const atlasSettingsFadeObserver = new ResizeObserver(fitAtlasSettingsFade);
 atlasSettingsFadeObserver.observe(settingsView);
 atlasSettingsFadeObserver.observe(settingsCardsContainer);
+settingsView.addEventListener('scroll', fitAtlasSettingsFade, { passive: true });
 function renderSettingsTab(tab, afterFade = false) {
   cancelAnimationFrame(atlasSettingsScrollFrame);
   clearTimeout(atlasSettingsTimer);
@@ -501,11 +506,30 @@ function renderSettingsTab(tab, afterFade = false) {
   atlasRecordingShortcut = false;
   atlasRecordingTabKeybind = null;
   const title =
-    { privacy: 'Privacy', customize: 'Customize', browsing: 'Browsing', keybinds: 'Keybinds', advanced: 'Advanced' }[
-      tab
-    ] || 'Privacy';
+    {
+      privacy: 'Privacy',
+      customize: 'Customize',
+      browsing: 'Browsing',
+      keybinds: 'Keybinds',
+      advanced: 'Advanced',
+      legal: 'Legal',
+    }[tab] || 'Privacy';
   settingsSectionTitle.textContent = title;
-  if (tab === 'privacy') {
+  if (tab === 'legal') {
+    const link = (href, label) =>
+      `<a class="settings-action-btn settings-link-btn" href="${href}" target="_blank" rel="noopener" aria-label="Open ${label}">View</a>`;
+    settingsCardsContainer.innerHTML =
+      atlasSettingsRow(
+        'Terms of Service',
+        'Use Atlas legally, follow your network’s rules and don’t abuse the service. Atlas comes with no guarantees.',
+        link('/terms.html', 'Terms of Service')
+      ) +
+      atlasSettingsRow(
+        'Privacy Policy',
+        'Your data stays in your browser, we don’t log the pages you visit, and ads load only if you accept.',
+        link('/privacy.html', 'Privacy Policy')
+      );
+  } else if (tab === 'privacy') {
     settingsCardsContainer.innerHTML =
       '<div class="settings-custom-title-group">' +
       atlasSettingsRow(
@@ -542,7 +566,18 @@ function renderSettingsTab(tab, afterFade = false) {
         'Panic Shortcut',
         'Record a shortcut and set its destination.',
         `<div class="settings-shortcut-controls"><button id="settingPanicKeyChar" class="settings-action-btn" aria-label="Record panic shortcut">${escapeHtml(panicKeyChar)}</button><input id="settingPanicUrl" class="settings-input-sm" aria-label="Panic destination" value="${escapeHtml(panicRedirectUrl)}" placeholder="https://google.com" /></div>`
-      );
+      ) +
+      (AtlasConsent.configured()
+        ? atlasSettingsRow(
+            'Ad Cookies',
+            'Let our ad partner use cookies to show and measure ads. Ads stay off until you allow this.',
+            atlasToggle('settingAdConsent', AtlasConsent.adsAllowed(), 'Allow ad cookies')
+          )
+        : '') +
+      '';
+    const adConsentToggle = document.getElementById('settingAdConsent');
+    if (adConsentToggle)
+      adConsentToggle.onchange = () => AtlasConsent.set(adConsentToggle.checked ? 'accepted' : 'rejected');
     bindAtlasToggle('settingCustomTitleEnabled', 'setting_custom_title_enabled', enabled => {
       customTitleEnabled = enabled;
       const fields = document.getElementById('customSiteBranding');

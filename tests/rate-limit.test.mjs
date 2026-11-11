@@ -78,8 +78,8 @@ test('limits come from the environment with safe defaults', () => {
   assert.deepEqual(limitSettings({ ATLAS_SOCKETS_PER_CLIENT: '50', ATLAS_REQUESTS_PER_MINUTE: 'nope' }), {
     socketsPerClient: 50,
     socketsTotal: 1000,
-    socketOpensPerMinute: 300,
-    requestsPerMinute: 3000,
-    suggestionsPerMinute: 1200,
+    socketOpensPerMinute: 1200,
+    requestsPerMinute: 12000,
+    suggestionsPerMinute: 4800,
   });
 });

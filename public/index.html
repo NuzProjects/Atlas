@@ -201,7 +201,7 @@
     <script src="/atlas-origin.js"></script>
     <script src="/atlas-url-crypto.js"></script>
     <script src="/atlas-label-text.js"></script>
-    <script src="/atlas-engines.js?v=4"></script>
+    <script src="/atlas-engines.js?v=5"></script>
     <script src="/atlas-game-ads.js"></script>
     <script src="/atlas-content-filter.js?v=1"></script>
     <script src="/atlas-icons.js?v=1"></script>
@@ -277,11 +277,12 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/atlas-ui.css?v=47" />
+    <link rel="stylesheet" href="/atlas-ui.css?v=51" />
     <link rel="stylesheet" href="/atlas-dock.css" />
     <link rel="stylesheet" href="/atlas-mobile.css?v=1" />
-    <link rel="stylesheet" href="/atlas-home-ads.css?v=20261111-even1" />
-    <script defer src="/ads.js?v=20261111-even1"></script>
+    <link rel="stylesheet" href="/atlas-home-ads.css?v=20261111-consent1" />
+    <script src="/atlas-consent.js?v=2"></script>
+    <script defer src="/ads.js?v=20261111-consent1"></script>
     <script defer src="/atlas-tooltips.js"></script>
   </head>
   <body class="grid-bg">
@@ -465,6 +466,25 @@
                 <path d="m8 6-6 6 6 6" />
               </svg>
               <span>Advanced</span>
+            </button>
+            <button class="settings-nav-item" data-tab="legal">
+              <svg
+                data-icon="scale"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3v18" />
+                <path d="m19 8 3 8a5 5 0 0 1-6 0zV7" />
+                <path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1" />
+                <path d="m5 8 3 8a5 5 0 0 1-6 0zV7" />
+                <path d="M7 21h10" />
+              </svg>
+              <span>Legal</span>
             </button>
           </div>
         </div>
@@ -859,6 +879,81 @@
                 </div>
               </div>
 
+              <div class="site-info-item" id="siteInfoMediaRow">
+                <div class="site-info-icon">
+                  <svg
+                    data-icon="video"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+                    <rect x="2" y="6" width="14" height="12" rx="2" />
+                  </svg>
+                </div>
+                <div class="site-info-text-group">
+                  <div class="site-info-item-title-row">
+                    <div class="site-info-item-title">Camera & Microphone</div>
+                    <label class="clean-switch">
+                      <input
+                        type="checkbox"
+                        id="sitePermissionMediaToggle"
+                        aria-label="Allow this site to use your camera and microphone"
+                      />
+                      <span class="clean-switch-slider"></span>
+                    </label>
+                  </div>
+                  <div class="site-info-item-desc">
+                    <div class="site-info-item-desc-inner">
+                      Lets this site use your camera, microphone and screen sharing. Other sites still need their own
+                      permission.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="site-info-item" id="siteInfoLocationRow">
+                <div class="site-info-icon">
+                  <svg
+                    data-icon="map-pin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+                    />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
+                <div class="site-info-text-group">
+                  <div class="site-info-item-title-row">
+                    <div class="site-info-item-title">Location</div>
+                    <label class="clean-switch">
+                      <input
+                        type="checkbox"
+                        id="sitePermissionLocationToggle"
+                        aria-label="Allow this site to use your location"
+                      />
+                      <span class="clean-switch-slider"></span>
+                    </label>
+                  </div>
+                  <div class="site-info-item-desc">
+                    <div class="site-info-item-desc-inner">
+                      Lets this site use your device location. Other sites still need their own permission.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="site-info-item" id="siteInfoCookiesRow">
                 <div class="site-info-icon">
                   <svg
@@ -1180,8 +1275,9 @@
       <span class="atlas-dock-delay" id="atlasDockDelay" aria-label="Atlas server round-trip delay">â€” ms</span>
     </div>
 
-    <script src="/atlas-app.js?v=1"></script>
-    <script src="/atlas-ui.js?v=28"></script>
+    <script src="/atlas-site-permissions.js?v=1"></script>
+    <script src="/atlas-app.js?v=2"></script>
+    <script src="/atlas-ui.js?v=31"></script>
     <script src="/atlas-browser.js?v=29"></script>
     <script src="/atlas-sessions.js?v=13"></script>
     <script src="/atlas-internal.js?v=3"></script>

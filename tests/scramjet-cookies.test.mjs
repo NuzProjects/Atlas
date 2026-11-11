@@ -155,3 +155,38 @@ test('a worker with no saved data starts with an empty jar', async () => {
   await tick();
   assert.equal(await (await worker.fetch('https://atlas.example/engine/scramjet/x')).text(), 'none');
 });
+
+test('engine pages keep the Atlas opener policy so sign-in pop-ups can reach their opener', async () => {
+  const worker = startWorker({ cookies: {} }, () => new Response('ok'));
+  const response = await worker.fetch('https://atlas.example/engine/scramjet/x');
+  assert.equal(response.headers.get('Cross-Origin-Opener-Policy'), 'same-origin');
+});
+
+test('Ultraviolet pages keep the Atlas opener policy too', async () => {
+  const uv = await readFile(new URL('../public/atlas-ultraviolet-sw.js', import.meta.url), 'utf8');
+  const listeners = {};
+  vm.runInNewContext(uv, {
+    self: {
+      location: { origin: 'https://atlas.example' },
+      addEventListener: (t, l) => (listeners[t] = l),
+      clients: { claim: async () => {} },
+      skipWaiting() {},
+    },
+    importScripts() {},
+    UVServiceWorker: function () {
+      return { route: () => true, fetch: async () => new Response('ok') };
+    },
+    Headers,
+    Response,
+    Request,
+    Object,
+  });
+  const response = await new Promise(resolve =>
+    listeners.fetch({
+      request: new Request('https://atlas.example/engine/ultraviolet/x'),
+      clientId: 'c',
+      respondWith: resolve,
+    })
+  );
+  assert.equal(response.headers.get('Cross-Origin-Opener-Policy'), 'same-origin');
+});

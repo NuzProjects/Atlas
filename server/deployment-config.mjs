@@ -105,11 +105,14 @@ export function isPublicAtlasFile(pathname) {
       '/atlas-ultraviolet-sw.js',
       '/ads.js',
       '/atlas-home-ads.css',
+      '/atlas-consent.js',
+      '/privacy.html',
+      '/terms.html',
     ].includes(pathname)
   )
     return true;
   return (
-    /^\/(?:index\.html|proxy-origin\.js|atlas-(?:tooltips\.js|origin\.js|page-storage\.js|url-crypto\.js|ui\.js|ui\.css|app\.js|browser\.js|sessions\.js|internal\.js|dock\.(?:js|css)|icons\.js|site-data\.js|mobile\.css|pages\.(?:html|css|js)))$/.test(
+    /^\/(?:index\.html|proxy-origin\.js|atlas-(?:tooltips\.js|origin\.js|page-storage\.js|url-crypto\.js|ui\.js|ui\.css|app\.js|browser\.js|sessions\.js|internal\.js|dock\.(?:js|css)|icons\.js|site-data\.js|site-permissions\.js|mobile\.css|pages\.(?:html|css|js)))$/.test(
       pathname
     ) ||
     (/^\/assets\/[^\\]+\.(?:svg|png|jpe?g|webp|gif|ico|avif|woff2?)$/i.test(pathname) &&

@@ -68,7 +68,7 @@
           files: {
             wasm: '/vendor/scramjet/scramjet.wasm.wasm',
             all: '/vendor/scramjet/scramjet.all.js',
-            sync: '/vendor/scramjet/scramjet.sync.js',
+            sync: location.origin + '/vendor/scramjet/scramjet.sync.js',
           },
           codec: { ...AtlasEngineConfig.codec },
           flags: { syncxhr: crossOriginIsolated },

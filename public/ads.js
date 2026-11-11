@@ -6,7 +6,6 @@
   if (!config || config.origin === location.origin) return;
   const { origin, units } = config;
   const version = encodeURIComponent(config.version);
-  const rails = [];
   const phone = matchMedia('(max-width: 760px), (pointer: coarse) and (max-height: 600px) and (max-width: 1000px)');
   let mobileSlot;
   let mobileOffset = 0;
@@ -46,12 +45,48 @@
     slotObserver.unobserve(slot);
     slot.remove();
   }
-  function clearRails() {
-    for (const rail of rails.splice(0)) {
-      for (const slot of [...rail.children]) removeSlot(slot);
-      rail.remove();
-    }
+  function railSet(host, className) {
+    const rails = [];
+    return {
+      clear() {
+        for (const rail of rails.splice(0)) {
+          for (const slot of [...rail.children]) removeSlot(slot);
+          rail.remove();
+        }
+      },
+      update(contentWidth) {
+        const gutter = (host.clientWidth - contentWidth) / 2;
+        const columns = Math.max(0, Math.floor((gutter - 32 + 16) / 316));
+        const rows = Math.max(0, Math.floor((host.clientHeight - 64 + 16) / 266));
+        const count = columns * rows;
+        if (!count) return this.clear();
+        for (let side = 0; side < 2; side++) {
+          let rail = rails[side];
+          if (!rail) {
+            rail = document.createElement('aside');
+            rail.className = className;
+            rail.dataset.side = side ? 'right' : 'left';
+            rail.setAttribute('aria-label', 'Advertisements');
+            rails[side] = rail;
+            host.append(rail);
+          }
+          rail.style.gridTemplateRows = `repeat(${rows},250px)`;
+          rail.style.gridTemplateColumns = `repeat(${columns},300px)`;
+          while (rail.children.length > count) removeSlot(rail.lastElementChild);
+          while (rail.children.length < count) {
+            const slot = document.createElement('div');
+            slot.className = 'atlas-home-ad-slot';
+            rail.append(slot);
+            slotObserver.observe(slot);
+          }
+        }
+      },
+    };
   }
+  const homeRails = railSet(home, 'atlas-home-ads');
+  const settings = document.getElementById('settingsView');
+  const settingsWindow = settings?.querySelector('.settings-window');
+  const settingsRails = settings && settingsWindow ? railSet(settings, 'atlas-home-ads atlas-settings-ads') : null;
   function clearMobile() {
     if (mobileSlot) removeSlot(mobileSlot);
     mobileSlot = null;
@@ -59,15 +94,26 @@
     if (home.style.getPropertyValue('--atlas-mobile-ad-offset')) home.style.removeProperty('--atlas-mobile-ad-offset');
     if (home.classList.contains('atlas-home-has-mobile-ad')) home.classList.remove('atlas-home-has-mobile-ad');
   }
+  function shown(view) {
+    return getComputedStyle(view).display !== 'none' && !view.classList.contains('view-exit');
+  }
   function update() {
     queued = false;
+    if (typeof AtlasConsent === 'undefined' || !AtlasConsent.adsAllowed()) {
+      homeRails.clear();
+      settingsRails?.clear();
+      clearMobile();
+      return;
+    }
     const path = typeof atlasAppURL === 'function' ? atlasAppURL().pathname : location.pathname;
-    const visible =
-      ['/', '/home'].includes(path) &&
-      getComputedStyle(home).display !== 'none' &&
-      !home.classList.contains('view-exit');
+    if (settingsRails) {
+      if (path === '/settings' && shown(settings) && !phone.matches)
+        settingsRails.update(Math.max(settingsWindow.getBoundingClientRect().width, 600));
+      else settingsRails.clear();
+    }
+    const visible = ['/', '/home'].includes(path) && shown(home);
     if (visible && phone.matches) {
-      clearRails();
+      homeRails.clear();
       const scale = Math.max(0, Math.min(1, (home.clientWidth - 48) / 300, (home.clientHeight * 0.28) / 250));
       if (!scale) {
         clearMobile();
@@ -95,38 +141,8 @@
       return;
     }
     clearMobile();
-    const contentWidth = Math.max(content?.getBoundingClientRect().width || 0, 600);
-    const gutter = (home.clientWidth - contentWidth) / 2;
-    const columns = visible ? Math.max(0, Math.floor((gutter - 32 + 16) / 316)) : 0;
-    const rows = visible ? Math.max(0, Math.floor((home.clientHeight - 64 + 16) / 266)) : 0;
-    const count = columns * rows;
-    if (!count) {
-      clearRails();
-      return;
-    }
-    for (let side = 0; side < 2; side++) {
-      let rail = rails[side];
-      if (!rail) {
-        rail = document.createElement('aside');
-        rail.className = 'atlas-home-ads';
-        rail.dataset.side = side ? 'right' : 'left';
-        rail.setAttribute('aria-label', 'Advertisements');
-        rails[side] = rail;
-        home.append(rail);
-      }
-      rail.style.gridTemplateRows = `repeat(${rows},250px)`;
-      rail.style.gridTemplateColumns = `repeat(${columns},300px)`;
-      const inset = `${Math.round((gutter - (columns * 316 - 16)) / 2)}px`;
-      rail.style.left = side ? '' : inset;
-      rail.style.right = side ? inset : '';
-      while (rail.children.length > count) removeSlot(rail.lastElementChild);
-      while (rail.children.length < count) {
-        const slot = document.createElement('div');
-        slot.className = 'atlas-home-ad-slot';
-        rail.append(slot);
-        slotObserver.observe(slot);
-      }
-    }
+    if (visible) homeRails.update(Math.max(content?.getBoundingClientRect().width || 0, 600));
+    else homeRails.clear();
   }
   function schedule() {
     if (!queued) {
@@ -136,12 +152,17 @@
   }
   new MutationObserver(schedule).observe(home, { attributes: true, attributeFilter: ['style', 'class'] });
   new ResizeObserver(schedule).observe(home);
+  if (settings) {
+    new MutationObserver(schedule).observe(settings, { attributes: true, attributeFilter: ['style', 'class'] });
+    new ResizeObserver(schedule).observe(settings);
+  }
   if (content) {
     new ResizeObserver(schedule).observe(content);
     content.addEventListener('animationend', schedule);
   }
   document.fonts?.ready.then(schedule);
   window.addEventListener('popstate', schedule);
+  window.addEventListener('atlas-ad-consent', schedule);
   window.addEventListener('hashchange', schedule);
   phone.addEventListener('change', schedule);
   schedule();
