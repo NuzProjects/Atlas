@@ -476,6 +476,15 @@ function scrollAtlasSettingsTop() {
 }
 for (const event of ['wheel', 'touchstart'])
   settingsView.addEventListener(event, () => cancelAnimationFrame(atlasSettingsScrollFrame), { passive: true });
+function fitAtlasSettingsFade() {
+  const box = settingsCardsContainer.getBoundingClientRect();
+  settingsView.style.setProperty('--settings-fade-left', box.left + 'px');
+  settingsView.style.setProperty('--settings-fade-width', box.width + 'px');
+  settingsView.classList.toggle('settings-overflowing', settingsView.scrollHeight > settingsView.clientHeight + 1);
+}
+const atlasSettingsFadeObserver = new ResizeObserver(fitAtlasSettingsFade);
+atlasSettingsFadeObserver.observe(settingsView);
+atlasSettingsFadeObserver.observe(settingsCardsContainer);
 function renderSettingsTab(tab, afterFade = false) {
   cancelAnimationFrame(atlasSettingsScrollFrame);
   clearTimeout(atlasSettingsTimer);

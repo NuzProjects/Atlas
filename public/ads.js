@@ -95,7 +95,9 @@
       return;
     }
     clearMobile();
-    const columns = visible ? Math.max(0, Math.floor((home.clientWidth - 680 - 96) / 632)) : 0;
+    const contentWidth = Math.max(content?.getBoundingClientRect().width || 0, 600);
+    const gutter = (home.clientWidth - contentWidth) / 2;
+    const columns = visible ? Math.max(0, Math.floor((gutter - 32 + 16) / 316)) : 0;
     const rows = visible ? Math.max(0, Math.floor((home.clientHeight - 64 + 16) / 266)) : 0;
     const count = columns * rows;
     if (!count) {
@@ -114,6 +116,9 @@
       }
       rail.style.gridTemplateRows = `repeat(${rows},250px)`;
       rail.style.gridTemplateColumns = `repeat(${columns},300px)`;
+      const inset = `${Math.round((gutter - (columns * 316 - 16)) / 2)}px`;
+      rail.style.left = side ? '' : inset;
+      rail.style.right = side ? inset : '';
       while (rail.children.length > count) removeSlot(rail.lastElementChild);
       while (rail.children.length < count) {
         const slot = document.createElement('div');

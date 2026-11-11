@@ -3870,8 +3870,11 @@ a:focus-visible,
 #settingsView::after {
   content: '';
   position: fixed;
-  inset: auto 0 0;
+  bottom: 0;
+  left: var(--settings-fade-left, 0);
+  width: var(--settings-fade-width, 100%);
   height: 100px;
+  display: none;
   z-index: 5;
   pointer-events: none;
   background: linear-gradient(transparent, var(--bg-card));
@@ -3879,4 +3882,7 @@ a:focus-visible,
   backdrop-filter: blur(10px);
   -webkit-mask-image: linear-gradient(transparent, #000 80%);
   mask-image: linear-gradient(transparent, #000 80%);
+}
+#settingsView.settings-overflowing::after {
+  display: block;
 }
