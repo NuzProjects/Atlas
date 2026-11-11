@@ -1,3 +1,12 @@
+document.addEventListener('pointerdown', () => document.documentElement.classList.add('atlas-pointer-input'), true);
+document.addEventListener(
+  'keydown',
+  event => {
+    if (!event.metaKey && !event.ctrlKey && !event.altKey)
+      document.documentElement.classList.remove('atlas-pointer-input');
+  },
+  true
+);
 document.title = 'Atlas';
 
 const defaultLocalWisp = window.__atlasConfig.defaultWisp || atlasAppOrigin().replace(/^http/, 'ws') + '/wisp/';

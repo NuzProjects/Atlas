@@ -240,6 +240,10 @@ body {
   user-select: none;
   touch-action: none;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html.atlas-pointer-input .tab-item:focus-visible {
+  outline: none !important;
 }
 
 .tab-item.tab-is-dragging {
