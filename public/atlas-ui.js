@@ -1041,7 +1041,10 @@ if (initialRoutePath === '/settings') switchView('settings', false);
 else switchView('home', false);
 
 function openBlankTab() {
-  return window.open('about:blank', '_blank');
+  const firefox = /Firefox\//.test(navigator.userAgent);
+  // Open Chromium's initial empty popup without navigating to about:blank, which some
+  // network filters (e.g. GoGuardian) block by URL.
+  return window.open(firefox ? 'about:blank' : '', '_blank');
 }
 function writeTab(tab, html) {
   const write = tab.Function(
