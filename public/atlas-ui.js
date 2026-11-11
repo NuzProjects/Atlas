@@ -1042,9 +1042,13 @@ else switchView('home', false);
 
 function openBlankTab() {
   const firefox = /Firefox\//.test(navigator.userAgent);
-  // Open Chromium's initial empty popup without navigating to about:blank, which some
-  // network filters (e.g. GoGuardian) block by URL.
-  return window.open(firefox ? 'about:blank' : '', '_blank');
+  // Open a popup and immediately stop it so its URL resolves to the Atlas page, never
+  // about:blank. Network filters (e.g. GoGuardian) block the literal about:blank URL,
+  // so window.open('about:blank') or window.open('') both get caught; a stopped blank
+  // popup stays on the Atlas origin, which is already allowed.
+  const blank = window.open(firefox ? 'about:blank' : ' ', '_blank');
+  if (!firefox) blank?.stop();
+  return blank;
 }
 function writeTab(tab, html) {
   const write = tab.Function(
