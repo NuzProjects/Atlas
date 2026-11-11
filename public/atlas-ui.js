@@ -522,12 +522,12 @@ function renderSettingsTab(tab, afterFade = false) {
       atlasSettingsRow(
         'Terms of Service',
         'Use Atlas legally, follow your network’s rules and don’t abuse the service. Atlas comes with no guarantees.',
-        link('/terms.html', 'Terms of Service')
+        link('/terms', 'Terms of Service')
       ) +
       atlasSettingsRow(
         'Privacy Policy',
         'Your data stays in your browser, we don’t log the pages you visit, and ads load only if you accept.',
-        link('/privacy.html', 'Privacy Policy')
+        link('/privacy', 'Privacy Policy')
       );
   } else if (tab === 'privacy') {
     settingsCardsContainer.innerHTML =

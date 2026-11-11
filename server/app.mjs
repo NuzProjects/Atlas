@@ -1623,8 +1623,14 @@ async function appHandler(req, res) {
     return;
   }
 
+  if (['/privacy.html', '/terms.html'].includes(reqUrl.pathname)) {
+    res.writeHead(301, { Location: reqUrl.pathname.slice(0, -5) + reqUrl.search });
+    res.end();
+    return;
+  }
   try {
     const isAppPage = ['/', '/home', '/apps', '/settings'].includes(reqUrl.pathname);
+    const legalPage = { '/privacy': '/privacy.html', '/terms': '/terms.html' }[reqUrl.pathname];
     if (!isAppPage && !isPublicAtlasFile(reqUrl.pathname)) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Not Found');
@@ -1633,7 +1639,9 @@ async function appHandler(req, res) {
     const staticRoot = reqUrl.pathname.startsWith('/assets/') ? __dirname : path.join(__dirname, 'public');
     let filePath = path.join(
       staticRoot,
-      isAppPage ? 'index.html' : reqUrl.pathname === '/atlas-origin.js' ? '/proxy-origin.js' : reqUrl.pathname
+      isAppPage
+        ? 'index.html'
+        : legalPage || (reqUrl.pathname === '/atlas-origin.js' ? '/proxy-origin.js' : reqUrl.pathname)
     );
     filePath = path.normalize(filePath);
 

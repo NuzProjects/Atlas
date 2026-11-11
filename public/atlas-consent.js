@@ -14,7 +14,12 @@ const AtlasConsent = (() => {
     try {
       localStorage.setItem(key, JSON.stringify({ choice: next, version, at: new Date().toISOString() }));
     } catch {}
-    document.getElementById('atlasConsentBanner')?.remove();
+    const banner = document.getElementById('atlasConsentBanner');
+    if (banner) {
+      banner.id = '';
+      banner.classList.remove('visible');
+      setTimeout(() => banner.remove(), 260);
+    }
     window.dispatchEvent(new CustomEvent('atlas-ad-consent', { detail: next }));
   }
   function show() {
@@ -25,8 +30,7 @@ const AtlasConsent = (() => {
     banner.setAttribute('role', 'region');
     banner.setAttribute('aria-label', 'Ad preferences');
     banner.innerHTML =
-      '<p>Atlas is free because of ads. Our ad partner may use cookies or similar technology to show and measure ads. ' +
-      '<a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a></p>' +
+      '<p>Atlas is free because of ads. Our ad partner may use cookies or similar technology to show and measure ads.</p>' +
       '<div class="atlas-consent-actions"><button type="button" data-consent="rejected">Reject</button>' +
       '<button type="button" data-consent="accepted">Accept</button></div>';
     banner.onclick = event => {
@@ -34,6 +38,8 @@ const AtlasConsent = (() => {
       if (next) set(next);
     };
     document.body.append(banner);
+    void banner.offsetWidth;
+    banner.classList.add('visible');
   }
   const termsKey = 'atlas_terms_accepted';
   const termsVersion = '2026-11-11';
@@ -53,8 +59,8 @@ const AtlasConsent = (() => {
       '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="atlasTermsTitle" aria-describedby="atlasTermsText" tabindex="-1">' +
       '<h2 id="atlasTermsTitle" class="atlas-terms-title">Welcome to Atlas</h2>' +
       '<p id="atlasTermsText" class="atlas-terms-text">By using Atlas, you agree to our ' +
-      '<a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and ' +
-      '<a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>' +
+      '<a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and ' +
+      '<a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>' +
       '<button type="button" class="modal-btn atlas-terms-agree" disabled></button></div>';
     const button = backdrop.querySelector('button');
     const hidden = [...document.body.children].filter(element => !element.inert);

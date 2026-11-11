@@ -106,8 +106,8 @@ export function isPublicAtlasFile(pathname) {
       '/ads.js',
       '/atlas-home-ads.css',
       '/atlas-consent.js',
-      '/privacy.html',
-      '/terms.html',
+      '/privacy',
+      '/terms',
     ].includes(pathname)
   )
     return true;
