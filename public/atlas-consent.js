@@ -1,51 +1,9 @@
 const AtlasConsent = (() => {
-  const key = 'atlas_ad_consent';
-  const version = '1';
-  const configured = () => Boolean(window.__atlasConfig?.ads);
-  function choice() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(key) || 'null');
-      return saved?.version === version && ['accepted', 'rejected'].includes(saved.choice) ? saved.choice : null;
-    } catch {
-      return null;
-    }
-  }
-  function set(next) {
-    try {
-      localStorage.setItem(key, JSON.stringify({ choice: next, version, at: new Date().toISOString() }));
-    } catch {}
-    const banner = document.getElementById('atlasConsentBanner');
-    if (banner) {
-      banner.id = '';
-      banner.classList.remove('visible');
-      setTimeout(() => banner.remove(), 260);
-    }
-    window.dispatchEvent(new CustomEvent('atlas-ad-consent', { detail: next }));
-  }
-  function show() {
-    if (!configured() || document.getElementById('atlasConsentBanner')) return;
-    const host = document.querySelector('#homeView .home-content');
-    const search = host?.querySelector('.search-wrapper');
-    if (!search) return;
-    const banner = document.createElement('section');
-    banner.id = 'atlasConsentBanner';
-    banner.className = 'atlas-consent';
-    banner.setAttribute('role', 'region');
-    banner.setAttribute('aria-label', 'Ad preferences');
-    banner.innerHTML =
-      '<p>Atlas is free because of ads. Our ad partner may use cookies or similar technology to show and measure ads.</p>' +
-      '<div class="atlas-consent-actions"><button type="button" data-consent="rejected">Reject</button>' +
-      '<button type="button" data-consent="accepted">Accept</button></div>';
-    banner.onclick = event => {
-      const next = event.target.closest('[data-consent]')?.dataset.consent;
-      if (next) set(next);
-    };
-    host.insertBefore(banner, search);
-    void banner.offsetWidth;
-    banner.classList.add('visible');
-  }
   const termsKey = 'atlas_terms_accepted';
-  const termsVersion = '2026-11-11';
+  const termsVersion = '2026-11-13';
+  try {
+    localStorage.removeItem('atlas_ad_consent');
+  } catch {}
   function termsAccepted() {
     try {
       return JSON.parse(localStorage.getItem(termsKey) || 'null')?.version === termsVersion;
@@ -96,7 +54,7 @@ const AtlasConsent = (() => {
       hidden.forEach(element => (element.inert = false));
       backdrop.classList.remove('active');
       setTimeout(() => backdrop.remove(), 230);
-      if (configured() && !choice()) show();
+      window.dispatchEvent(new CustomEvent('atlas-terms-accepted'));
     };
     document.body.append(backdrop);
     void backdrop.offsetWidth;
@@ -105,9 +63,8 @@ const AtlasConsent = (() => {
   }
   function start() {
     if (!termsAccepted()) showTerms();
-    else if (configured() && !choice()) show();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
-  return { configured, choice, set, show, termsAccepted, adsAllowed: () => choice() === 'accepted' };
+  return { termsAccepted };
 })();

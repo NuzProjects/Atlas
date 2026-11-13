@@ -99,7 +99,7 @@
   }
   function update() {
     queued = false;
-    if (typeof AtlasConsent === 'undefined' || !AtlasConsent.adsAllowed()) {
+    if (typeof AtlasConsent === 'undefined' || !AtlasConsent.termsAccepted()) {
       homeRails.clear();
       settingsRails?.clear();
       clearMobile();
@@ -162,7 +162,7 @@
   }
   document.fonts?.ready.then(schedule);
   window.addEventListener('popstate', schedule);
-  window.addEventListener('atlas-ad-consent', schedule);
+  window.addEventListener('atlas-terms-accepted', schedule);
   window.addEventListener('hashchange', schedule);
   phone.addEventListener('change', schedule);
   schedule();

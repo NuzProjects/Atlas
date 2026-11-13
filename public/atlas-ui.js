@@ -142,6 +142,14 @@ const ATLAS_THEMES = {
   sepia: { label: 'Sepia', colors: ['#1b1713', '#28221b', '#493e30', '#5e503e'] },
   forest: { label: 'Forest', colors: ['#121815', '#1c2520', '#36463c', '#45594c'] },
   plum: { label: 'Plum', colors: ['#19141b', '#251e29', '#42364a', '#574761'] },
+  midnight: { label: 'Midnight', colors: ['#10131c', '#191e2b', '#33405c', '#435375'] },
+  ocean: { label: 'Ocean', colors: ['#0f171a', '#182226', '#2f4850', '#3f5f6a'] },
+  slate: { label: 'Slate', colors: ['#14171b', '#1e2329', '#3a424c', '#4b5562'] },
+  mocha: { label: 'Mocha', colors: ['#1a1514', '#27201e', '#473a36', '#5d4c46'] },
+  crimson: { label: 'Crimson', colors: ['#1a1213', '#271a1c', '#4a3033', '#613f43'] },
+  rose: { label: 'Rose', colors: ['#1c1417', '#291d22', '#4a343d', '#614652'] },
+  amber: { label: 'Amber', colors: ['#1a1610', '#271f15', '#4a3e27', '#61512f'] },
+  teal: { label: 'Teal', colors: ['#101a19', '#192725', '#2f4a46', '#3e615c'] },
 };
 const ATLAS_BACKGROUNDS = {
   grid: {
@@ -566,18 +574,7 @@ function renderSettingsTab(tab, afterFade = false) {
         'Panic Shortcut',
         'Record a shortcut and set its destination.',
         `<div class="settings-shortcut-controls"><button id="settingPanicKeyChar" class="settings-action-btn" aria-label="Record panic shortcut">${escapeHtml(panicKeyChar)}</button><input id="settingPanicUrl" class="settings-input-sm" aria-label="Panic destination" value="${escapeHtml(panicRedirectUrl)}" placeholder="https://google.com" /></div>`
-      ) +
-      (AtlasConsent.configured()
-        ? atlasSettingsRow(
-            'Ad Cookies',
-            'Let our ad partner use cookies to show and measure ads. Ads stay off until you allow this.',
-            atlasToggle('settingAdConsent', AtlasConsent.adsAllowed(), 'Allow ad cookies')
-          )
-        : '') +
-      '';
-    const adConsentToggle = document.getElementById('settingAdConsent');
-    if (adConsentToggle)
-      adConsentToggle.onchange = () => AtlasConsent.set(adConsentToggle.checked ? 'accepted' : 'rejected');
+      );
     bindAtlasToggle('settingCustomTitleEnabled', 'setting_custom_title_enabled', enabled => {
       customTitleEnabled = enabled;
       const fields = document.getElementById('customSiteBranding');

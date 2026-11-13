@@ -49,57 +49,31 @@ test('changing a frame policy reports whether the tab must reload to apply it', 
   assert.match(attributes.allow, /geolocation \*/);
 });
 
-test('ads stay off until the visitor accepts, and the choice can be withdrawn', async () => {
-  const events = [];
+test('the first-run agreement is remembered per version, and the old ad choice is cleared', async () => {
+  const store = storage();
+  store.setItem('atlas_ad_consent', JSON.stringify({ choice: 'rejected', version: '1' }));
   const consent = await load('atlas-consent.js', 'AtlasConsent', {
-    window: {
-      __atlasConfig: { ads: { origin: 'https://ads.example' } },
-      dispatchEvent: event => events.push(event.detail),
-    },
-    document: { readyState: 'loading', addEventListener() {}, getElementById: () => null },
-    CustomEvent: class {
-      constructor(type, init) {
-        this.detail = init.detail;
-      }
-    },
-    Date,
+    localStorage: store,
+    window: { dispatchEvent() {} },
+    document: { readyState: 'loading', addEventListener() {} },
   });
-  assert.equal(consent.adsAllowed(), false);
-  consent.set('accepted');
-  assert.equal(consent.adsAllowed(), true);
-  consent.set('rejected');
-  assert.equal(consent.adsAllowed(), false);
-  assert.deepEqual(events, ['accepted', 'rejected']);
+  assert.equal(store.getItem('atlas_ad_consent'), null);
+  assert.equal(consent.termsAccepted(), false);
+  store.setItem('atlas_terms_accepted', JSON.stringify({ version: '2026-11-11' }));
+  assert.equal(consent.termsAccepted(), false, 'an older agreement must be shown again');
+  store.setItem('atlas_terms_accepted', JSON.stringify({ version: '2026-11-13' }));
+  assert.equal(consent.termsAccepted(), true);
+  assert.deepEqual(Object.keys(consent), ['termsAccepted'], 'there is no ad opt-in or opt-out any more');
 });
 
-test('the ad-cookie question goes directly above the home search bar, never at the bottom of the page', async () => {
-  const placed = [];
-  const search = { name: 'search bar' };
-  const host = {
-    querySelector: selector => (selector === '.search-wrapper' ? search : null),
-    insertBefore: (node, reference) => placed.push({ node, reference }),
-  };
-  const element = () => ({ classList: { add() {}, remove() {} }, setAttribute() {}, offsetWidth: 0 });
-  const stage = (home, appended) => ({
-    window: { __atlasConfig: { ads: { origin: 'https://ads.example' } }, dispatchEvent() {} },
-    document: {
-      readyState: 'loading',
-      addEventListener() {},
-      getElementById: () => null,
-      querySelector: selector => (selector === '#homeView .home-content' ? home : null),
-      createElement: element,
-      body: { append: node => appended.push(node) },
-    },
-  });
-  const appended = [];
-  const consent = await load('atlas-consent.js', 'AtlasConsent', stage(host, appended));
-  consent.show();
-  assert.equal(placed.length, 1);
-  assert.equal(placed[0].reference, search);
-  assert.equal(placed[0].node.id, 'atlasConsentBanner');
-  assert.deepEqual(appended, []);
-  const missing = [];
-  const noHome = await load('atlas-consent.js', 'AtlasConsent', stage(null, missing));
-  noHome.show();
-  assert.deepEqual(missing, []);
+test('ads are shown to everyone once the agreement is accepted, with no ad-consent gate', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const ads = await readFile(new URL('../public/ads.js', import.meta.url), 'utf8');
+  assert.match(ads, /AtlasConsent\.termsAccepted\(\)/);
+  assert.doesNotMatch(ads, /adsAllowed|atlas-ad-consent/);
+  const settings = await readFile(new URL('../public/atlas-ui.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(settings, /Ad Cookies|settingAdConsent/);
+  const policy = await readFile(new URL('../public/privacy.html', import.meta.url), 'utf8');
+  assert.match(policy, /cannot be turned off in Atlas/);
+  assert.doesNotMatch(policy, /only load after you accept|reject ad cookies/i);
 });
