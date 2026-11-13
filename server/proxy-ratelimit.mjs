@@ -82,6 +82,8 @@ export function createLimiter(settings = limitSettings(), { now = Date.now, maxC
   const windows = new Map();
   const sockets = new Map();
   let openSockets = 0;
+  let requestsRefused = 0;
+  let socketsRefused = 0;
 
   function take(bucket, key, limit) {
     if (key === 'local') return true;
@@ -102,13 +104,25 @@ export function createLimiter(settings = limitSettings(), { now = Date.now, maxC
 
   return {
     allowRequest(key, kind = 'requests') {
-      return take(kind, key, kind === 'suggestions' ? settings.suggestionsPerMinute : settings.requestsPerMinute);
+      const allowed = take(
+        kind,
+        key,
+        kind === 'suggestions' ? settings.suggestionsPerMinute : settings.requestsPerMinute
+      );
+      if (!allowed) requestsRefused++;
+      return allowed;
     },
     openSocket(key) {
       if (key === 'local') return () => {};
       const current = sockets.get(key) || 0;
-      if (openSockets >= settings.socketsTotal || current >= settings.socketsPerClient) return null;
-      if (!take('socket-opens', key, settings.socketOpensPerMinute)) return null;
+      if (openSockets >= settings.socketsTotal || current >= settings.socketsPerClient) {
+        socketsRefused++;
+        return null;
+      }
+      if (!take('socket-opens', key, settings.socketOpensPerMinute)) {
+        socketsRefused++;
+        return null;
+      }
       sockets.set(key, current + 1);
       openSockets++;
       let released = false;
@@ -121,6 +135,6 @@ export function createLimiter(settings = limitSettings(), { now = Date.now, maxC
         else sockets.delete(key);
       };
     },
-    stats: () => ({ openSockets, clients: sockets.size, windows: windows.size }),
+    stats: () => ({ openSockets, clients: sockets.size, windows: windows.size, requestsRefused, socketsRefused }),
   };
 }

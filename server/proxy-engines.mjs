@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -19,6 +20,37 @@ export const proxyEngineAssets = [
   '/atlas-ultraviolet-sw.js',
   ...Object.entries(files).flatMap(([name, entries]) => entries.map(file => '/vendor/' + name + '/' + file)),
 ];
+
+const validators = new Map();
+async function validator(filePath, prefixPath) {
+  const stat = await fs.stat(filePath);
+  const prefixStat = prefixPath ? await fs.stat(prefixPath) : null;
+  const key = [filePath, stat.size, stat.mtimeMs, prefixStat?.size, prefixStat?.mtimeMs].join('|');
+  let etag = validators.get(key);
+  if (!etag) {
+    const hash = createHash('sha256');
+    if (prefixPath) hash.update(await fs.readFile(prefixPath)).update('\n');
+    etag =
+      '"' +
+      hash
+        .update(await fs.readFile(filePath))
+        .digest('base64url')
+        .slice(0, 27) +
+      '"';
+    validators.set(key, etag);
+  }
+  return etag;
+}
+const normalizeEtag = value =>
+  value
+    .trim()
+    .replace(/^W\//, '')
+    .replace(/-(?:gzip|zstd|br)"$/, '"');
+export function matchesEtag(header, etag) {
+  return String(header || '')
+    .split(',')
+    .some(value => value.trim() === '*' || normalizeEtag(value) === etag);
+}
 
 export async function createProxyEngines(root, urlCodec) {
   for (const [name, entries] of Object.entries(files))
@@ -57,16 +89,24 @@ export async function createProxyEngines(root, urlCodec) {
     const match = /^\/vendor\/(scramjet|ultraviolet|baremux|epoxy)\/([^/]+)$/.exec(url.pathname);
     if (!match || !files[match[1]].includes(match[2])) return false;
     const [, name, file] = match;
-    const body = await fs.readFile(path.join(root, 'node_modules', packages[name], 'dist', file));
-    const prefix =
-      file === 'scramjet.all.js' || file === 'uv.bundle.js'
-        ? await fs.readFile(path.join(root, 'public', 'atlas-url-crypto.js'))
-        : null;
-    res.writeHead(200, {
+    const filePath = path.join(root, 'node_modules', packages[name], 'dist', file);
+    const prefixPath =
+      file === 'scramjet.all.js' || file === 'uv.bundle.js' ? path.join(root, 'public', 'atlas-url-crypto.js') : null;
+    const etag = await validator(filePath, prefixPath);
+    const headers = {
       'Content-Type': file.endsWith('.wasm') ? 'application/wasm' : 'text/javascript',
       'Cache-Control': 'public, max-age=3600',
       'Cross-Origin-Resource-Policy': 'same-origin',
-    });
+      ETag: etag,
+    };
+    if (matchesEtag(req.headers['if-none-match'], etag)) {
+      res.writeHead(304, headers);
+      res.end();
+      return true;
+    }
+    const body = await fs.readFile(filePath);
+    const prefix = prefixPath ? await fs.readFile(prefixPath) : null;
+    res.writeHead(200, headers);
     if (prefix) res.write(prefix + '\n');
     res.end(body);
     return true;

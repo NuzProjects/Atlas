@@ -80,10 +80,14 @@ Atlas limits how much each visitor can use so one person or script cannot exhaus
 | `ATLAS_REQUESTS_PER_MINUTE` | 12000 | API and page requests per visitor per minute |
 | `ATLAS_SUGGESTIONS_PER_MINUTE` | 4800 | Search suggestions per visitor per minute |
 | `ATLAS_BUFFER_BUDGET_MB` | 96 | Memory used for pages being processed at once |
+| `ATLAS_WISP_STREAMS_TOTAL` | 256 | Open site connections per browser relay connection |
+| `ATLAS_WISP_STREAMS_PER_HOST` | 32 | Open site connections per browser relay connection to one site |
+| `ATLAS_WISP_STREAMS_GLOBAL` | 1000 | Open site connections across all visitors |
+| `ATLAS_STATS_INTERVAL_SECONDS` | 60 | How often a one-line usage summary (counts only) is logged; `0` turns it off |
 
 Visitors over a limit get an HTTP 429 response and can retry shortly. Behind Caddy or Cloudflare, Atlas uses the visitor's real address. Limits are per address, so a school or office sharing one public address shares one allowance; the defaults leave room for a full classroom.
 
-Each relay connection can carry many site connections, so give the service enough open files (`LimitNOFILE=65536` in `deploy/atlas.service`) before raising `ATLAS_SOCKETS_TOTAL`.
+Each relay connection can carry many site connections, so give the service enough open files (`LimitNOFILE=65536` in `deploy/atlas.service`) before raising `ATLAS_SOCKETS_TOTAL` or the stream limits. The stream limits only apply in production; development leaves them unlimited.
 
 ## Build from source
 

@@ -14,6 +14,7 @@ import {
   close_reasons,
 } from '../packet.mjs';
 import { options } from './options.mjs';
+import { stats } from './stats.mjs';
 import { MOTDExtension, UDPExtension, serialize_extensions, parse_extensions } from '../extensions.mjs';
 
 export class HandshakeError extends Error {}
@@ -252,8 +253,11 @@ export class ServerConnection {
     const overLimit =
       (options.stream_limit_total !== -1 && existing.length >= options.stream_limit_total) ||
       (options.stream_limit_per_host !== -1 &&
-        existing.filter(item => item.socket.hostname === hostname).length >= options.stream_limit_per_host);
+        existing.filter(item => item.socket.hostname === hostname).length >= options.stream_limit_per_host) ||
+      (options.stream_limit_global !== -1 && stats.open_streams >= options.stream_limit_global);
+    if (overLimit) stats.throttled_streams++;
     this.streams[stream_id] = stream;
+    stats.open_streams++;
 
     (async () => {
       const resolved = {};
@@ -286,6 +290,7 @@ export class ServerConnection {
       logging.debug(`(${this.conn_id}) closing stream ${stream_id} for reason ${reason}`);
     }
     delete this.streams[stream_id];
+    stats.open_streams--;
     await stream.close(reason);
   }
 

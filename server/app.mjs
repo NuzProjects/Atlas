@@ -33,6 +33,9 @@ import { buildInfo } from './proxy-build.mjs';
 import { createProxyEngines } from './proxy-engines.mjs';
 import { createDefaultRelayGateway } from './default-relay.mjs';
 import { clientKey, createLimiter } from './proxy-ratelimit.mjs';
+import { applyWispLimits, wispLimits } from './wisp-limits.mjs';
+import { startStatsLog } from './proxy-stats.mjs';
+import { stats as wispStats } from '../src/server/stats.mjs';
 
 import { server as wisp } from '../src/index.mjs';
 import * as logging from '../src/logging.mjs';
@@ -66,8 +69,7 @@ wisp.options.dns_result_order = 'ipv4first';
 wisp.options.allow_private_ips = deployment.allowPrivate;
 wisp.options.allow_loopback_ips = deployment.allowPrivate;
 if (deployment.production) {
-  wisp.options.stream_limit_total = 64;
-  wisp.options.stream_limit_per_host = 16;
+  applyWispLimits(wisp.options, wispLimits());
   wisp.options.port_blacklist = [25, 465, 587];
 }
 
@@ -1929,6 +1931,11 @@ function limitedUpgrade(req, socket, head) {
 }
 const server = http.createServer({ maxHeaderSize: 1024 * 1024 }, handleRequest);
 server.on('upgrade', limitedUpgrade);
+startStatsLog({
+  limiter,
+  wispStats,
+  intervalSeconds: process.env.ATLAS_STATS_INTERVAL_SECONDS ? Number(process.env.ATLAS_STATS_INTERVAL_SECONDS) : 60,
+});
 
 server.listen(PORT, deployment.host, () => {
   console.log(`\n======================================================`);

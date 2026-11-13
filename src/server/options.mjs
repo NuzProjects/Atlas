@@ -11,6 +11,7 @@ export const options = {
   client_ip_whitelist: null,
   stream_limit_per_host: -1,
   stream_limit_total: -1,
+  stream_limit_global: -1,
   allow_udp_streams: true,
   allow_tcp_streams: true,
 
