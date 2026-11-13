@@ -24,6 +24,9 @@ const AtlasConsent = (() => {
   }
   function show() {
     if (!configured() || document.getElementById('atlasConsentBanner')) return;
+    const host = document.querySelector('#homeView .home-content');
+    const search = host?.querySelector('.search-wrapper');
+    if (!search) return;
     const banner = document.createElement('section');
     banner.id = 'atlasConsentBanner';
     banner.className = 'atlas-consent';
@@ -37,7 +40,7 @@ const AtlasConsent = (() => {
       const next = event.target.closest('[data-consent]')?.dataset.consent;
       if (next) set(next);
     };
-    document.body.append(banner);
+    host.insertBefore(banner, search);
     void banner.offsetWidth;
     banner.classList.add('visible');
   }

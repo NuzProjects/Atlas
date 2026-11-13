@@ -71,3 +71,35 @@ test('ads stay off until the visitor accepts, and the choice can be withdrawn', 
   assert.equal(consent.adsAllowed(), false);
   assert.deepEqual(events, ['accepted', 'rejected']);
 });
+
+test('the ad-cookie question goes directly above the home search bar, never at the bottom of the page', async () => {
+  const placed = [];
+  const search = { name: 'search bar' };
+  const host = {
+    querySelector: selector => (selector === '.search-wrapper' ? search : null),
+    insertBefore: (node, reference) => placed.push({ node, reference }),
+  };
+  const element = () => ({ classList: { add() {}, remove() {} }, setAttribute() {}, offsetWidth: 0 });
+  const stage = (home, appended) => ({
+    window: { __atlasConfig: { ads: { origin: 'https://ads.example' } }, dispatchEvent() {} },
+    document: {
+      readyState: 'loading',
+      addEventListener() {},
+      getElementById: () => null,
+      querySelector: selector => (selector === '#homeView .home-content' ? home : null),
+      createElement: element,
+      body: { append: node => appended.push(node) },
+    },
+  });
+  const appended = [];
+  const consent = await load('atlas-consent.js', 'AtlasConsent', stage(host, appended));
+  consent.show();
+  assert.equal(placed.length, 1);
+  assert.equal(placed[0].reference, search);
+  assert.equal(placed[0].node.id, 'atlasConsentBanner');
+  assert.deepEqual(appended, []);
+  const missing = [];
+  const noHome = await load('atlas-consent.js', 'AtlasConsent', stage(null, missing));
+  noHome.show();
+  assert.deepEqual(missing, []);
+});

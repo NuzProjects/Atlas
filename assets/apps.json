@@ -220,8 +220,7 @@
     "url": "https://neal.fun",
     "id": "neal-fun",
     "slug": null,
-    "domain": "neal.fun",
-    "icon": "/assets/apps/neal-fun.svg"
+    "domain": "neal.fun"
   },
   {
     "name": "CrazyGames",
