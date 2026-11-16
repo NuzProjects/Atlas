@@ -10,7 +10,7 @@ const iconDirectory = path.join(path.dirname(require.resolve('lucide-static/pack
 const { version } = require('lucide-static/package.json');
 
 const runtimeIcons = ['chevron-down', 'globe', 'history', 'rotate-cw', 'trash-2', 'x'];
-const htmlFiles = ['public/index.html', 'public/atlas-app.js'];
+const htmlFiles = ['public/index.html', 'public/js/app/atlas-app.js'];
 const imageIcons = {
   'assets/tab-globe.svg': ['globe', '#9b9fa3'],
   'assets/atlas-history.svg': ['history', '#ffffff'],
@@ -63,7 +63,7 @@ function atlasIcon(name, className = '') {
   return \`<svg class="\${className}" data-icon="\${name}" ${attributes}>\${ATLAS_ICONS[name] || ''}</svg>\`;
 }
 `;
-await writeFormatted('public/atlas-icons.js', output);
+await writeFormatted('public/js/app/atlas-icons.js', output);
 for (const [file, [name, color]] of Object.entries(imageIcons)) {
   const image = `<svg xmlns="http://www.w3.org/2000/svg" ${attributes.replace('currentColor', color)}>${markup(name)}</svg>\n`;
   fs.writeFileSync(path.join(root, file), image);

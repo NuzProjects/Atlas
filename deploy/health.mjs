@@ -1,8 +1,8 @@
 import { ClientConnection } from '../src/client/connection.mjs';
 import * as logging from '../src/logging.mjs';
 import { pathToFileURL } from 'node:url';
-import origins from '../public/proxy-origin.js';
-import { proxyEngineAssets } from '../server/proxy-engines.mjs';
+import origins from '../public/js/proxy/proxy-origin.js';
+import { proxyEngineAssets } from '../server/proxy/proxy-engines.mjs';
 logging.set_level(logging.ERROR);
 
 export async function healthCheck(origin, { timeout = 10000, requireIsolation = false, production = false } = {}) {
@@ -29,7 +29,7 @@ export async function healthCheck(origin, { timeout = 10000, requireIsolation = 
       throw new Error('Proxy engine readiness failed: ' + asset);
   }
   if (production && /"contentMode":"shared"/.test(html)) {
-    const helper = await fetch(new URL('/atlas-page-storage.js', base), {
+    const helper = await fetch(new URL('/js/proxy/atlas-page-storage.js', base), {
       signal: AbortSignal.timeout(timeout),
       redirect: 'error',
     });

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { buildInfo } from '../server/proxy-build.mjs';
+import { buildInfo } from '../server/config/proxy-build.mjs';
 export async function packageRelease(
   root = process.cwd(),
   output = path.join(root, 'artifacts', 'atlas-release.tar.gz')

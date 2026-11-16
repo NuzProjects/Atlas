@@ -199,13 +199,14 @@
       ];
     </script>
     <script src="/atlas-origin.js"></script>
-    <script src="/atlas-url-crypto.js"></script>
-    <script src="/atlas-label-text.js"></script>
-    <script src="/atlas-engines.js?v=5"></script>
-    <script src="/atlas-game-ads.js"></script>
-    <script src="/atlas-content-filter.js?v=1"></script>
-    <script src="/atlas-icons.js?v=1"></script>
-    <script src="/atlas-site-data.js?v=1"></script>
+    <script src="/js/proxy/atlas-url-crypto.js"></script>
+    <script src="/js/app/atlas-label-text.js"></script>
+    <script src="/js/proxy/atlas-blank-storage.js?v=2"></script>
+    <script src="/js/proxy/atlas-engines.js?v=6"></script>
+    <script src="/js/ads/atlas-game-ads.js"></script>
+    <script src="/js/proxy/atlas-content-filter.js?v=1"></script>
+    <script src="/js/app/atlas-icons.js?v=1"></script>
+    <script src="/js/proxy/atlas-site-data.js?v=1"></script>
     <script>
       if (window.self !== window.top && new URLSearchParams(window.location.search).get('atlas_blank') === '1') {
         try {
@@ -261,6 +262,7 @@
               },
             });
             Object.defineProperty(window, 'localStorage', { configurable: true, get: () => bridge });
+            window.__atlasBlankStorageReady = AtlasBlankStorage.start(window.parent);
           }
         } catch {}
       }
@@ -320,13 +322,10 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/atlas-ui.css?v=53" />
-    <link rel="stylesheet" href="/atlas-dock.css" />
-    <link rel="stylesheet" href="/atlas-mobile.css?v=1" />
-    <link rel="stylesheet" href="/atlas-home-ads.css?v=20261113-always1" />
-    <script src="/atlas-consent.js?v=5"></script>
-    <script defer src="/ads.js?v=20261113-always1"></script>
-    <script defer src="/atlas-tooltips.js"></script>
+    <link rel="stylesheet" href="/css/app.css?v=54" />
+    <script src="/js/app/atlas-consent.js?v=5"></script>
+    <script defer src="/js/ads/ads.js?v=20261113-always1"></script>
+    <script defer src="/js/app/atlas-tooltips.js"></script>
   </head>
   <body class="grid-bg">
     <div id="homeView">
@@ -1318,13 +1317,13 @@
       <span class="atlas-dock-delay" id="atlasDockDelay" aria-label="Atlas server round-trip delay">â€” ms</span>
     </div>
 
-    <script src="/atlas-site-permissions.js?v=1"></script>
-    <script src="/atlas-app.js?v=3"></script>
-    <script src="/atlas-ui.js?v=37"></script>
-    <script src="/atlas-browser.js?v=29"></script>
-    <script src="/atlas-sessions.js?v=13"></script>
-    <script src="/atlas-internal.js?v=3"></script>
-    <script src="/atlas-dock.js?v=1"></script>
+    <script src="/js/proxy/atlas-site-permissions.js?v=1"></script>
+    <script src="/js/app/atlas-app.js?v=3"></script>
+    <script src="/js/app/atlas-ui.js?v=41"></script>
+    <script src="/js/app/atlas-browser.js?v=29"></script>
+    <script src="/js/app/atlas-sessions.js?v=13"></script>
+    <script src="/js/app/atlas-internal.js?v=3"></script>
+    <script src="/js/app/atlas-dock.js?v=1"></script>
     <script>
       if (window.__atlasBlankBoot) {
         window.addEventListener(

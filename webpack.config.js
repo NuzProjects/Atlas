@@ -123,7 +123,7 @@ module.exports = webpack_configs.concat(new_configs, [
       }),
     ],
     output: {
-      path: path.join(__dirname, 'public'),
+      path: path.join(__dirname, 'public', 'js', 'proxy'),
       filename: 'atlas-url-crypto.js',
       library: { name: 'AtlasUrlCrypto', type: 'var' },
     },

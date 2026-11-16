@@ -44,7 +44,7 @@
     "dev": "webpack --watch",
     "server_cli": "node ./src/bin/server_cli.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "verify:deploy": "node deploy/health.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",

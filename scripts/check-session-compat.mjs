@@ -1,5 +1,3 @@
-// Run from a checkout with Playwright installed, or set ATLAS_PLAYWRIGHT_MODULE to its module path.
-// BROWSER=firefox selects Firefox; Chromium uses the installed system browser.
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
@@ -102,7 +100,6 @@ async function launch(profile, mode, seed) {
           ? { executablePath: '/usr/bin/chromium' }
           : { channel: 'chrome' }
   );
-  // The launcher's redirect is unrelated to this local regression.
   await context.route('https://www.google.com/**', route =>
     route.fulfill({ body: '<title>Launcher destination</title>' })
   );

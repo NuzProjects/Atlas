@@ -5,6 +5,6 @@ artifacts
 assets
 src/vendor
 public/eruda.js
-public/atlas-url-crypto.js
+public/js/proxy/atlas-url-crypto.js
 package-lock.json
 *.md

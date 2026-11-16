@@ -101,7 +101,7 @@ npm run build:prod
 npm start
 ```
 
-`npm run build:prod` bundles the Wisp client and server into `dist/` and the browser URL-encryption helper into `public/atlas-url-crypto.js`. Without a `.env` file, `npm start` runs Atlas in development mode on **http://localhost:8080**, listening on your machine only. Copy `.env.example` to `.env` to run it in production mode.
+`npm run build:prod` bundles the Wisp client and server into `dist/` and the browser URL-encryption helper into `public/js/proxy/atlas-url-crypto.js`. Without a `.env` file, `npm start` runs Atlas in development mode on **http://localhost:8080**, listening on your machine only. Copy `.env.example` to `.env` to run it in production mode.
 
 Useful scripts while working on Atlas:
 
