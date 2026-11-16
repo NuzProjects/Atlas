@@ -58,7 +58,7 @@ function fakeIndexedDB(stored) {
   };
 }
 
-function startWorker(stored, respond) {
+function startWorker(stored, respond, clients = []) {
   const listeners = {};
   const engine = {
     cookieStore: new CookieStore(),
@@ -69,7 +69,7 @@ function startWorker(stored, respond) {
   const self = {
     location: { origin: 'https://atlas.example' },
     addEventListener: (type, listener) => (listeners[type] = listener),
-    clients: { claim: async () => {} },
+    clients: { claim: async () => {}, matchAll: async () => clients },
     skipWaiting() {},
   };
   vm.runInNewContext(source, {
@@ -81,6 +81,8 @@ function startWorker(stored, respond) {
       },
     }),
     indexedDB: fakeIndexedDB(stored),
+    URL,
+    setTimeout,
     Headers,
     Response,
     Request,
@@ -101,8 +103,11 @@ function startWorker(stored, respond) {
       await Promise.all(pending);
       return response;
     });
-  const message = data =>
-    new Promise(resolve => listeners.message({ data, waitUntil: promise => promise.then(resolve) }));
+  const message = (data, source) =>
+    new Promise(resolve => {
+      listeners.message({ data, source, waitUntil: promise => promise.then(resolve) });
+      if (data?.type !== 'atlas-reload-cookies' || data.data === null || typeof data.data === 'string') resolve();
+    });
   return { engine, fetch, message };
 }
 
@@ -189,4 +194,87 @@ test('Ultraviolet pages keep the Atlas opener policy too', async () => {
     })
   );
   assert.equal(response.headers.get('Cross-Origin-Opener-Policy'), 'same-origin');
+});
+
+const appClient = () => {
+  const posted = [];
+  return { url: 'https://atlas.example/home?atlas_blank=1', posted, postMessage: message => posted.push(message) };
+};
+const siteFrame = () => {
+  const posted = [];
+  return {
+    url: 'https://atlas.example/engine/scramjet/https%3A%2F%2Fsite.example%2F',
+    posted,
+    postMessage: m => posted.push(m),
+  };
+};
+
+test('a changed jar is sent to the Atlas page but never to proxied site frames', async () => {
+  const app = appClient();
+  const site = siteFrame();
+  const worker = startWorker(
+    { cookies: {} },
+    engine => {
+      engine.cookieStore.cookies['.site.example@/@session'] = sessionJar['.site.example@/@session'];
+      return new Response('ok');
+    },
+    [app, site]
+  );
+  await worker.fetch('https://atlas.example/engine/scramjet/https%3A%2F%2Fsite.example%2Flogin');
+  await tick();
+  assert.deepEqual(
+    app.posted.filter(message => message.type === 'atlas-cookies').map(message => JSON.parse(message.data)),
+    [sessionJar]
+  );
+  assert.deepEqual(site.posted, []);
+});
+
+test('the jar is saved for the page even when the worker cannot use IndexedDB', async () => {
+  const app = appClient();
+  const worker = startWorker(
+    null,
+    engine => {
+      engine.cookieStore.cookies['.site.example@/@session'] = sessionJar['.site.example@/@session'];
+      return new Response('ok');
+    },
+    [app]
+  );
+  await worker.fetch('https://atlas.example/engine/scramjet/https%3A%2F%2Fsite.example%2Flogin');
+  await tick();
+  assert.equal(app.posted.filter(message => message.type === 'atlas-cookies').length, 1);
+});
+
+test('the Atlas page can seed the jar and gets an acknowledgement', async () => {
+  const app = appClient();
+  const worker = startWorker(null, engine => new Response(engine.cookieStore.header() || 'none'), [app]);
+  await tick();
+  await worker.message({ type: 'atlas-reload-cookies', data: JSON.stringify(sessionJar) }, app);
+  assert.equal(app.posted.at(-1).type, 'atlas-cookies-loaded');
+  assert.equal(await (await worker.fetch('https://atlas.example/engine/scramjet/x')).text(), 'session=abc');
+});
+
+test('a proxied site cannot seed or replace the jar', async () => {
+  const site = siteFrame();
+  const worker = startWorker(null, engine => new Response(engine.cookieStore.header() || 'none'), []);
+  await tick();
+  await worker.message({ type: 'atlas-reload-cookies', data: JSON.stringify(sessionJar) }, site);
+  assert.deepEqual(site.posted, []);
+  assert.equal(await (await worker.fetch('https://atlas.example/engine/scramjet/x')).text(), 'none');
+});
+
+test('a worker that restarts with an empty jar asks the Atlas page for it', async () => {
+  const app = appClient();
+  const worker = startWorker(null, engine => new Response(engine.cookieStore.header() || 'none'), [app]);
+  await tick();
+  assert.ok(app.posted.some(message => message.type === 'atlas-request-cookies'));
+  await worker.message({ type: 'atlas-reload-cookies', data: JSON.stringify(sessionJar) }, app);
+  assert.equal(await (await worker.fetch('https://atlas.example/engine/scramjet/x')).text(), 'session=abc');
+});
+
+test('a page with nothing saved lets the restarted worker carry on at once', async () => {
+  const app = appClient();
+  const worker = startWorker(null, engine => new Response(engine.cookieStore.header() || 'none'), [app]);
+  await tick();
+  await worker.message({ type: 'atlas-reload-cookies', data: null }, app);
+  assert.equal(await (await worker.fetch('https://atlas.example/engine/scramjet/x')).text(), 'none');
 });

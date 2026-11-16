@@ -100,6 +100,7 @@
           }
         });
       });
+    if (engine === 'scramjet') await AtlasCookieRelay.seed(registration);
   }
   async function navigate(tab, target, nativeAddress, relay) {
     const engine = effective(),

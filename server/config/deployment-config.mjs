@@ -120,6 +120,7 @@ const PUBLIC_ATLAS_FILES = new Set([
   ...[
     'atlas-blank-storage',
     'atlas-content-filter',
+    'atlas-cookie-relay',
     'atlas-engines',
     'atlas-page-storage',
     'atlas-site-data',

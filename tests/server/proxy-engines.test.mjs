@@ -18,6 +18,7 @@ function fixture({ engine = 'scramjet', failScript = () => false, failInit = fal
     location: { href: 'http://localhost/', origin: 'http://localhost' },
     localStorage: { getItem: () => engine },
     AtlasEngineConfig: { codec: { encode: x => 'encoded:' + x } },
+    AtlasCookieRelay: { seed: async () => {} },
     BareMux: {
       BareMuxConnection: class {
         async setTransport() {}

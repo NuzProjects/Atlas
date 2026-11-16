@@ -23,6 +23,50 @@ function withCookieStore(mode, use) {
   });
 }
 
+const appPages = new Set(['/', '/home', '/apps', '/settings']);
+let pendingJar = null;
+
+function isAppClient(client) {
+  try {
+    const url = new URL(client.url);
+    return url.origin === self.location.origin && appPages.has(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function appClients() {
+  return Promise.resolve()
+    .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
+    .then(clients => clients.filter(isAppClient))
+    .catch(() => []);
+}
+
+function broadcastCookies(cookies) {
+  appClients().then(clients => clients.forEach(client => client.postMessage({ type: 'atlas-cookies', data: cookies })));
+}
+
+function jarIsEmpty() {
+  return !Object.keys(JSON.parse(engine.cookieStore.dump() || '{}')).length;
+}
+
+function applyJar(data) {
+  engine.cookieStore.load(data);
+  savedCookies = engine.cookieStore.dump();
+}
+
+function requestJar() {
+  return appClients().then(
+    clients =>
+      new Promise(resolve => {
+        if (!clients.length) return resolve();
+        pendingJar = resolve;
+        setTimeout(resolve, 600);
+        clients.forEach(client => client.postMessage({ type: 'atlas-request-cookies' }));
+      })
+  );
+}
+
 function loadCookies() {
   return withCookieStore('readonly', store => {
     const read = store.get('cookies');
@@ -30,21 +74,36 @@ function loadCookies() {
       engine.cookieStore.load(JSON.stringify(read.result || {}));
       savedCookies = engine.cookieStore.dump();
     };
-  });
+  }).then(() => (jarIsEmpty() ? requestJar() : undefined));
 }
 
 function saveCookies() {
   const cookies = engine.cookieStore.dump();
   if (cookies === savedCookies) return;
   savedCookies = cookies;
+  broadcastCookies(cookies);
   return withCookieStore('readwrite', store => store.put(JSON.parse(cookies), 'cookies'));
 }
 
 let cookiesReady = loadCookies();
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('message', event => {
-  if (event.data?.type !== 'atlas-reload-cookies') return;
-  cookiesReady = loadCookies();
+  const message = event.data;
+  if (message?.type !== 'atlas-reload-cookies') return;
+  if (typeof message.data === 'string') {
+    if (!isAppClient(event.source)) return;
+    applyJar(message.data);
+    if (pendingJar) pendingJar();
+    pendingJar = null;
+    event.source.postMessage({ type: 'atlas-cookies-loaded' });
+    return;
+  }
+  if (message.data === null) {
+    if (pendingJar) pendingJar();
+    pendingJar = null;
+    return;
+  }
+  cookiesReady = loadCookies().then(() => broadcastCookies(savedCookies));
   event.waitUntil(cookiesReady);
 });
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));

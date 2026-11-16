@@ -200,8 +200,13 @@
       const registrations = await root.navigator.serviceWorker?.getRegistrations?.();
       for (const registration of registrations || []) {
         const worker = registration.active;
-        if (worker && /atlas-scramjet-sw\.js/.test(worker.scriptURL))
-          worker.postMessage({ type: 'atlas-reload-cookies' });
+        if (worker && /atlas-scramjet-sw\.js/.test(worker.scriptURL)) {
+          const data =
+            root.__atlasBlankBoot && typeof AtlasCookieRelay !== 'undefined'
+              ? (await AtlasCookieRelay.readJar()) || '{}'
+              : undefined;
+          worker.postMessage({ type: 'atlas-reload-cookies', ...(data === undefined ? {} : { data }) });
+        }
       }
     } catch {}
   }
