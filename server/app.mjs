@@ -279,15 +279,19 @@ async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCo
           }
           const chunks = [];
           let bytes = 0;
+          let counted = 0;
           let held = true;
           const releaseBuffer = () => {
             if (!held) return;
             held = false;
-            bufferedBytes -= bytes;
+            bufferedBytes -= counted;
           };
           responseBody.on('data', c => {
             bytes += c.length;
-            bufferedBytes += c.length;
+            if (held) {
+              counted += c.length;
+              bufferedBytes += c.length;
+            }
             if (bytes > 32 * 1024 * 1024) {
               req.destroy(new Error('Upstream response exceeds 32 MiB limit'));
               return;
