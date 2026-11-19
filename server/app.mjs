@@ -171,10 +171,30 @@ function getWispConnection(wispUrl, lane = 0) {
   return opening;
 }
 
-async function fetchOverWisp(wispUrl, targetUrl, options = {}, redirectCount = 0) {
-  return withAtlasFetchSlot(new URL(targetUrl).hostname, (releaseSlot, lane) =>
-    fetchOverWispRequest(wispUrl, targetUrl, { ...options, releaseSlot, lane }, redirectCount)
+const RETRYABLE_CONNECTION_ERROR =
+  /before secure TLS connection was established|socket hang up|Connection to Wisp server .* (?:closed|timed out)/;
+
+function canRetry(error, options) {
+  return (
+    !options.body &&
+    ['GET', 'HEAD', undefined].includes(options.method) &&
+    !options.responseSink?.headersSent &&
+    RETRYABLE_CONNECTION_ERROR.test(error?.message || '')
   );
+}
+
+async function fetchOverWisp(wispUrl, targetUrl, options = {}, redirectCount = 0) {
+  const attempt = () =>
+    withAtlasFetchSlot(new URL(targetUrl).hostname, (releaseSlot, lane) =>
+      fetchOverWispRequest(wispUrl, targetUrl, { ...options, releaseSlot, lane }, redirectCount)
+    );
+  try {
+    return await attempt();
+  } catch (error) {
+    if (!canRetry(error, options)) throw error;
+    await new Promise(resolve => setTimeout(resolve, 150));
+    return attempt();
+  }
 }
 async function fetchOverWispRequest(wispUrl, targetUrl, options = {}, redirectCount = 0) {
   if (redirectCount > 5) {

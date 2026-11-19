@@ -41,6 +41,7 @@ export function createWispAgent(getConnection, { secure = false, ca, idleTimeout
           sessions.set(sessionKey, session);
         });
         const failed = error => {
+          sessions.delete(sessionKey);
           duplex.destroy();
           callback(error);
         };
