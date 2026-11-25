@@ -113,6 +113,7 @@ const PUBLIC_ATLAS_FILES = new Set([
     'atlas-internal',
     'atlas-label-text',
     'atlas-pages',
+    'atlas-recommended',
     'atlas-sessions',
     'atlas-tooltips',
     'atlas-ui',
