@@ -95,11 +95,10 @@ const AtlasRecommended = (() => {
     card = document.createElement('div');
     card.className = 'modal-backdrop atlas-restore-backdrop atlas-recommended-backdrop';
     card.innerHTML =
-      '<div class="modal-card" role="dialog" aria-labelledby="atlasRecommendedTitle" aria-describedby="atlasRecommendedText">' +
+      '<div class="modal-card" role="dialog" aria-labelledby="atlasRecommendedTitle">' +
       '<div class="atlas-restore-heading"><h2 id="atlasRecommendedTitle" class="atlas-restore-title">Recommended Settings</h2>' +
       `<button type="button" class="atlas-restore-close" aria-label="Dismiss recommended settings" data-recommended="close">${atlasIcon('x')}</button></div>` +
-      '<p id="atlasRecommendedText" class="atlas-recommended-text">Turn on Auto Cloak, about:blank, Anti‑Close and the Panic Key. You can change them later in Settings.</p>' +
-      '<button type="button" class="modal-btn" data-recommended="enable">Enable</button>' +
+      '<button type="button" class="modal-btn" data-recommended="enable" aria-label="Enable Auto Cloak, about:blank, Anti-Close and the Panic Key">Enable</button>' +
       '<p class="atlas-restore-error" role="status" hidden></p></div>';
     card.querySelector('[data-recommended="close"]').onclick = dismiss;
     card.querySelector('[data-recommended="enable"]').onclick = enable;

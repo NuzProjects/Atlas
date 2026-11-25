@@ -2793,24 +2793,13 @@ a:focus-visible,
   font-size: 12px;
   line-height: 1.5;
 }
-.atlas-recommended-text {
-  margin: 0 0 12px;
-  color: var(--text-muted);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
 .atlas-recommended-backdrop .modal-btn:disabled {
   opacity: 0.7;
   cursor: default;
 }
 @media (max-width: 760px) {
-  .atlas-recommended-backdrop {
-    justify-content: center;
-    padding: 12px 12px calc(env(safe-area-inset-bottom) + 96px);
-  }
-  .atlas-recommended-backdrop .modal-card {
-    width: 100%;
-    max-width: 360px;
+  .atlas-restore-backdrop {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
   }
 }
 .atlas-history-favicon {
